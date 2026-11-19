@@ -1,73 +1,151 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#fd951fcc"/>
   <title>NABNAK</title>
 
-  <meta name="description" content="Um simples quadro kanban.">
+  <meta name="description" content="A simple kanban board." data-i18n-content="description">
   <meta name="keywords" content="Kanban, Quadro kanban, board kanban, metodologia ágil, drag and drop, JavaScript, Vanilla JS, HTML, HTML5, CSS, CSS3">
     
   <meta name="robots" content="index">
 
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@200;300;400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="./css/planner.css">
 </head>
 <body>
+  <div class="language-menu">
+    <button id="language-toggle" class="language-toggle" type="button" aria-label="Language menu" aria-expanded="false" aria-controls="language-panel" data-i18n-label="menuLabel">
+      <span aria-hidden="true">☰</span>
+    </button>
+    <div class="language-backdrop" aria-hidden="true"></div>
+    <div id="language-panel" class="language-panel" inert aria-hidden="true">
+      <div class="info">
+        <h1 class="logo">NAB<br/>NAK</h1>
+        <p class="slogan"><span data-i18n="sloganFirst">a simple</span> <span data-i18n="sloganSecond">kanban board</span></p>
+      </div>
+      <fieldset>
+        <legend data-i18n="language">Language</legend>
+        <label><input type="radio" name="language" value="pt-BR"><span lang="pt-BR">Português (Brasil)</span></label>
+        <label><input type="radio" name="language" value="en" checked><span lang="en">English</span></label>
+        <label><input type="radio" name="language" value="es"><span lang="es">Español</span></label>
+      </fieldset>
+      <nav class="planner-nav" aria-label="Views" data-i18n-label="views">
+        <button id="open-calendar" type="button" data-i18n="calendar">Calendar</button>
+        <button id="open-goals" type="button" data-i18n="goals">Goals</button>
+      </nav>
+    </div>
+  </div>
+  <section class="task" aria-labelledby="add-task-heading">
+      <h2 id="add-task-heading"><label for="task" data-i18n="addTask">ADD TASK</label></h2>
+      <form id="addTask" action="POST">
+        <input id="task" name="task" type="text" autocomplete="off" placeholder="What do you need to do?" data-i18n-placeholder="taskPrompt" required>
+        <div class="task-toolbar">
+          <button id="task-date-toggle" class="task-option-button" type="button" aria-expanded="false" aria-controls="task-date-panel" aria-label="Due date" data-i18n-label="dueButton">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 11h18"/></svg>
+            <span id="task-date-summary" class="task-option-label" data-i18n="dueButton">Due date</span>
+          </button>
+          <button id="task-goal-toggle" class="task-option-button" type="button" aria-expanded="false" aria-controls="task-goal-panel" aria-label="Goal" data-i18n-label="goalButton">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+            <span id="task-goal-summary" class="task-option-label" data-i18n="goalButton">Goal</span>
+          </button>
+          <label id="task-date-panel" class="task-option-panel" for="new-task-date" hidden><span data-i18n="dueDate">Due date (optional)</span><input id="new-task-date" type="date" min="0001-01-01" max="9999-12-31"></label>
+          <label id="task-goal-panel" class="task-option-panel" for="new-task-goal" hidden><span data-i18n="goal">Goal (optional)</span><select id="new-task-goal"></select></label>
+          <button id="task-add-button" class="task-add-button" type="submit" data-i18n="addShort">Add</button>
+        </div>
+      </form>
+  </section>
   <div class="boards">
     <!-- Quadro de tarefas para fazer -->
     <div class="board">
-      <h2>TO-DO</h2>
+      <h2 data-i18n="todo">TO-DO</h2>
       <div class="dropZone" id="todo">
         <!-- Cartões de tarefas -->
         <div class="card" draggable="true">
           <div class="status todo"></div>
-          <div class="content">Está é uma tarefa em espera! (Experimente adicionar outras tarefas logo abaixo.)</div>
+          <div class="content" data-i18n="exampleTodo">This task is waiting! (Try adding more tasks above.)</div>
         </div>
       </div>
     </div>
     <!-- Quadro de tarefas sendo feitas -->
     <div class="board">
-      <h2>DOING</h2>
+      <h2 data-i18n="doing">DOING</h2>
       <div class="dropZone" id="doing">
         <div class="card" draggable="true">
           <div class="status doing"></div>
-          <div class="content">Está é uma tarefa sendo feita! (Experimente arrasta-lá para alguma outra coluna.)</div>
+          <div class="content" data-i18n="exampleDoing">This task is in progress! (Try dragging it to another column.)</div>
         </div>
         
       </div>
     </div>
     <!-- Quadro de tarefas já feitas -->
     <div class="board">
-      <h2>DONE!</h2>
+      <h2 data-i18n="done">DONE!</h2>
       <div class="dropZone" id="done">
         <div class="card" draggable="true">
           <div class="status done"></div>
-          <div class="content">Está é uma tarefa concluída! (Experimente remove-la do quadro arrastando até a lixeira.)</div>
+          <div class="content" data-i18n="exampleDone">This task is complete! (Try removing it with its delete button.)</div>
         </div>
         
       </div>
     </div>
   </div>
-  <div class="footer">
-    <div class="task">
-      <h2><label for="task">ADD TASK</label></h2>
-      <form id="addTask" action="POST">
-        <input id="task" name="task" type="text" autocomplete="off">
-        <button type="submit"><img src="./icons/plus.svg" alt="Add task" /></button>
-      </form>
-    </div>
-    <div class="info">
-      <h1 class="logo">NAB<br/>NAK</h1>
-      <p class="slogan">a simple<br/>kanban board</p>
-    </div>
-    <div class="garbage">
-      <h2>Garbage</h2>
-      <div class="dropZone" id="garbage">
-    </div>
-  </div>
+  <p id="storage-warning" class="storage-warning" role="alert" hidden></p>
 
-  <script type="text/javascript" src="./js/script.js" defer></script>
+
+  <dialog id="calendar-dialog" class="planner-dialog" aria-labelledby="calendar-title">
+    <header class="planner-header"><h2 id="calendar-title" data-i18n="calendar">Calendar</h2><button type="button" data-close-dialog data-i18n-label="close" aria-label="Close">×</button></header>
+    <div class="calendar-toolbar">
+      <button id="previous-year" type="button" data-i18n-label="previousYear" aria-label="Previous year">«</button>
+      <button id="previous-month" type="button" data-i18n-label="previousMonth" aria-label="Previous month">‹</button>
+      <label><span class="sr-only" data-i18n="chooseMonth">Month and year</span><input id="calendar-month" type="month" min="0001-01" max="9999-12"></label>
+      <button id="next-month" type="button" data-i18n-label="nextMonth" aria-label="Next month">›</button>
+      <button id="next-year" type="button" data-i18n-label="nextYear" aria-label="Next year">»</button>
+      <button id="calendar-today" type="button" data-i18n="today">Today</button>
+    </div>
+    <h3 id="calendar-heading" class="calendar-heading" aria-live="polite"></h3>
+    <div class="calendar-layout">
+      <section class="calendar-month-view" aria-labelledby="calendar-heading"><div id="calendar-week" class="calendar-week" aria-hidden="true"></div><div id="calendar-days" class="calendar-days"></div><div id="calendar-legend" class="calendar-legend"></div></section>
+      <section class="calendar-agenda" aria-labelledby="selected-date"><h3 id="selected-date"></h3><p data-i18n="tasksForDay">Tasks for this day</p><div id="calendar-tasks"></div><button id="calendar-new-task" class="primary" type="button" data-i18n="newTask">New task</button></section>
+    </div>
+  </dialog>
+  <dialog id="task-dialog" class="planner-dialog editor-dialog" aria-labelledby="task-editor-heading">
+    <header class="planner-header"><h2 id="task-editor-heading"></h2><button type="button" data-close-dialog data-i18n-label="close" aria-label="Close">×</button></header>
+    <form id="task-editor-form" class="planner-form">
+      <label for="edit-task-title"><span data-i18n="taskTitle">Task title</span><textarea id="edit-task-title" required rows="3"></textarea></label>
+      <label for="edit-task-date"><span data-i18n="dueDate">Due date (optional)</span><input id="edit-task-date" type="date" min="0001-01-01" max="9999-12-31" aria-describedby="date-hint"></label>
+      <small id="date-hint" data-i18n="dateHint">Clear the date field to remove the due date.</small>
+      <label for="edit-task-status"><span data-i18n="status">Column</span><select id="edit-task-status"><option value="todo" data-i18n="todo">TO-DO</option><option value="doing" data-i18n="doing">DOING</option><option value="done" data-i18n="done">DONE!</option></select></label>
+      <label for="edit-task-goal"><span data-i18n="goal">Goal (optional)</span><select id="edit-task-goal"></select></label>
+      <p id="task-error" class="form-error" role="alert"></p>
+      <div class="planner-actions"><button type="submit" class="primary" data-i18n="save">Save</button><button type="button" data-close-dialog data-i18n="cancel">Cancel</button><button id="delete-task" type="button" class="danger" data-i18n="delete">Delete</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="goals-dialog" class="planner-dialog" aria-labelledby="goals-title">
+    <header class="planner-header"><h2 id="goals-title" data-i18n="goals">Goals</h2><button type="button" data-close-dialog data-i18n-label="close" aria-label="Close">×</button></header>
+    <button id="new-goal" class="primary" type="button" data-i18n="newGoal">New goal</button>
+    <div id="goals-list" class="goals-list"></div>
+  </dialog>
+  <dialog id="goal-dialog" class="planner-dialog editor-dialog" aria-labelledby="goal-editor-heading">
+    <header class="planner-header"><h2 id="goal-editor-heading"></h2><button type="button" data-close-dialog data-i18n-label="close" aria-label="Close">×</button></header>
+    <form id="goal-editor-form" class="planner-form">
+      <label for="edit-goal-title"><span data-i18n="goalTitle">Goal title</span><input id="edit-goal-title" type="text" required></label>
+      <label for="edit-goal-description"><span data-i18n="goalDescription">Description (optional)</span><textarea id="edit-goal-description" rows="3"></textarea></label>
+      <label for="edit-goal-date"><span data-i18n="deadline">Deadline</span><input id="edit-goal-date" type="date" min="0001-01-01" max="9999-12-31" required></label>
+      <label for="edit-goal-target"><span data-i18n="target">Tasks required</span><input id="edit-goal-target" type="number" min="1" step="1" required></label>
+      <p id="goal-error" class="form-error" role="alert"></p>
+      <div class="planner-actions"><button type="submit" class="primary" data-i18n="save">Save</button><button type="button" data-close-dialog data-i18n="cancel">Cancel</button><button id="delete-goal" type="button" class="danger" data-i18n="delete">Delete</button></div>
+    </form>
+  </dialog>
+
+  <script src="./js/store.js" defer></script>
+  <script src="./js/planner-translations.js" defer></script>
+  <script src="./js/i18n.js" defer></script>
+  <script src="./js/script.js" defer></script>
+  <script src="./js/task-form.js" defer></script>
+  <script src="./js/planner.js" defer></script>
 </body>
 </html>
