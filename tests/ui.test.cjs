@@ -271,7 +271,9 @@ test('top form is unique and precedes the columns; plain cards have no empty act
   const {$, context, document} = boot();
   const section = document.querySelector('.task'), boards = document.querySelector('.boards');
   assert.equal(document.querySelectorAll('#addTask').length, 1);
-  assert.ok(document.body.children.indexOf(section) < document.body.children.indexOf(boards));
+  const workspace = document.querySelector('.workspace');
+  assert.equal(section.parentElement, workspace); assert.equal(boards.parentElement, workspace);
+  assert.ok(workspace.children.indexOf(section) < workspace.children.indexOf(boards));
   assert.equal(section.getAttribute('aria-labelledby'), 'add-task-heading'); assert.ok($('add-task-heading'));
   assert.equal(document.querySelector('.footer'), null); assert.equal($('garbage'), null);
   const task = context.NabnakStore.addTask({title: 'Plain task'});
@@ -279,13 +281,97 @@ test('top form is unique and precedes the columns; plain cards have no empty act
   assert.equal(card.querySelector('.card-details'), null);
   assert.equal(card.querySelectorAll('.card-action').length, 2);
 });
-test('layout CSS reserves menu clearance, a centered 480px form and responsive balanced columns', () => {
+for (const language of ['en', 'pt-BR', 'es']) {
+  test(`empty, single and populated columns retain controls and accept drops in ${language}`, () => {
+    const app = boot(new Map([['nabnak.language', language]]));
+    const {context, document, $} = app;
+    const store = context.NabnakStore;
+    const verifyCounts = () => {
+      for (const status of ['todo', 'doing', 'done']) {
+        const count = store.getState().tasks.filter(task => task.status === status).length;
+        const counter = $(status).parentElement.querySelector('.board-count');
+        assert.equal(counter.textContent, String(count));
+        assert.equal(counter.getAttribute('aria-label'), `${context.NabnakI18n.t('tasksCount')}: ${count}`);
+      }
+    };
+    // All changes use this test's isolated in-memory storage.
+    for (const task of store.getState().tasks) store.deleteTask(task.id);
+    verifyCounts();
+    for (const count of [0, 1, 8]) {
+      for (const task of store.getState().tasks) store.deleteTask(task.id);
+      for (const status of ['todo', 'doing', 'done']) {
+        for (let i = 0; i < count; i++) store.addTask({title: `Task ${i}: ${'Long user text '.repeat(12)}`, status, dueDate: '2027-12-31'});
+        assert.equal($(status).querySelectorAll('.card').length, count);
+        verifyCounts();
+      }
+      assert.equal($('workspace-title').textContent, context.NabnakI18n.t('myTasks'));
+      assert.equal(document.querySelectorAll('.logo').length, 1);
+      for (const card of document.querySelectorAll('.card')) {
+        assert.equal(card.querySelectorAll('.card-action').length, 2);
+        assert.ok(card.querySelector('.date-badge'));
+      }
+      const task = store.addTask({title: 'Move through empty or populated columns'});
+      for (const status of ['doing', 'done', 'todo']) {
+        const card = document.querySelector(`[data-task-id="${task.id}"]`);
+        card.fire('dragstart', {dataTransfer: {setData() {}}});
+        assert.equal($(status).fire('dragover', {dataTransfer: {}}), false);
+        $(status).fire('drop');
+        assert.equal(store.getState().tasks.find(item => item.id === task.id).status, status);
+        verifyCounts();
+      }
+      assert.equal(boot(app.data).context.NabnakStore.getState().tasks.length, count * 3 + 1);
+      // Translation refresh must preserve both the header icons and the counts.
+      document.querySelector(`input[value="${language === 'en' ? 'pt-BR' : 'en'}"]`).click();
+      verifyCounts();
+      assert.ok($('todo').parentElement.querySelector('h2').querySelector('svg'));
+      document.querySelector(`input[value="${language}"]`).click();
+      verifyCounts();
+    }
+  });
+}
+
+test('reference badges show only existing metadata, localize dates and keep saved data unchanged', () => {
+  const app = boot(); const {context, document} = app; const store = context.NabnakStore;
+  const goal = store.addGoal({title: 'Projeto WEB', dueDate: '2027-12-31', target: 2});
+  const plain = store.addTask({title: 'Plain'});
+  const dated = store.addTask({title: 'Dated', dueDate: '2027-01-25'});
+  const linked = store.addTask({title: 'Linked', goalId: goal.id});
+  const completed = store.addTask({title: 'Completed', status: 'done'});
+  const all = store.addTask({title: 'All metadata', status: 'done', dueDate: '2027-01-20', goalId: goal.id});
+  const saved = app.data.get('nabnak.data');
+  const cardFor = task => document.querySelector(`[data-task-id="${task.id}"]`);
+  for (const language of ['pt-BR', 'en', 'es']) {
+    document.querySelector(`input[value="${language}"]`).click();
+    assert.equal(cardFor(plain).querySelector('.card-details'), null);
+    assert.equal(cardFor(dated).querySelector('.card-details').children.length, 1);
+    assert.equal(cardFor(linked).querySelector('.card-details').children.length, 1);
+    assert.equal(cardFor(linked).querySelector('.task-goal').textContent, goal.title);
+    assert.equal(cardFor(completed).querySelector('.card-details').children.length, 1);
+    assert.equal(cardFor(completed).querySelector('.task-date'), null);
+    assert.equal(cardFor(completed).querySelector('.completion-badge').textContent, context.NabnakI18n.t('completed'));
+    assert.equal(cardFor(all).querySelector('.card-details').children.length, 3);
+    for (const task of [dated, all]) {
+      const badge = cardFor(task).querySelector('.task-date');
+      const expected = new Intl.DateTimeFormat(language, {dateStyle: 'short'}).format(context.NabnakData.dateObject(task.dueDate));
+      assert.equal(badge.textContent, expected);
+      assert.ok(badge.getAttribute('aria-label').includes(context.NabnakDisplayDate(task.dueDate)));
+      assert.equal(badge.querySelector('svg').getAttribute('aria-hidden'), 'true');
+    }
+    assert.equal(app.data.get('nabnak.data'), saved);
+  }
+  const reloaded = boot(app.data).context.NabnakStore.getState();
+  assert.equal(reloaded.tasks.find(task => task.id === all.id).goalId, goal.id);
+  assert.equal(reloaded.tasks.find(task => task.id === all.id).dueDate, '2027-01-20');
+});
+
+test('layout CSS shares a bounded workspace and uses content-sized responsive columns', () => {
   const fs = require('node:fs'), path = require('node:path');
   const css = fs.readFileSync(path.join(__dirname, '../css/style.css'), 'utf8');
-  assert.match(css, /body\{[^}]*padding: 68px 30px 30px;/);
-  assert.match(css, /\.task\{[^}]*width: 100%;[^}]*max-width: 480px;[^}]*margin: 0 auto 24px;/);
+  assert.match(css, /\.workspace\{[^}]*width: 100%;[^}]*max-width: 1440px;/);
+  assert.doesNotMatch(css, /\.boards\{[^}]*(?:flex: 1|height: 100)/);
+  assert.match(css, /\.boards\{[^}]*align-items: stretch;/);
   assert.match(css, /\.boards\{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
-  assert.match(css, /@media \(max-width: 700px\)\{[^]*padding: 68px 16px 24px;[^]*grid-template-columns: minmax\(0, 1fr\);/);
+  assert.match(css, /@media \(max-width: 700px\)\{[^]*padding: 64px 16px 24px;[^]*grid-template-columns: minmax\(0, 1fr\);/);
   assert.doesNotMatch(css, /\.footer\{|\.garbage\{/);
-  for (const [status, color] of [['todo', 'red'], ['doing', 'yellow'], ['done', 'green']]) assert.match(css, new RegExp('\\.' + status + '\\{\\s*background-color: ' + color + ';'));
+  for (const [status, color] of [['todo', '#ee4053'], ['doing', '#e0cb3d'], ['done', '#55b96a']]) assert.match(css, new RegExp('\\.' + status + '\\{\\s*background-color: ' + color + ';'));
 });

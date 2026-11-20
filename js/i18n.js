@@ -4,8 +4,9 @@
   // Add a dictionary and a matching radio option to support another language.
   const translations = {
     en: {
+      myTasks: 'My tasks', tasksSubtitle: 'Organize your day with ease.',
       language: 'Language', menuLabel: 'Language menu',
-      todo: 'TO-DO', doing: 'DOING', done: 'DONE!',
+      todo: 'To do', doing: 'In progress', done: 'Done',
       addTask: 'ADD TASK', addTaskLabel: 'Add task', garbage: 'Garbage',
       garbageHint: 'Drag a task here to remove it',
       sloganFirst: 'a simple', sloganSecond: 'kanban board',
@@ -15,8 +16,9 @@
       exampleDone: 'This task is complete! (Try removing it with its delete button.)'
     },
     'pt-BR': {
+      myTasks: 'Minhas tarefas', tasksSubtitle: 'Organize seu dia de forma simples',
       language: 'Idioma', menuLabel: 'Menu de idiomas',
-      todo: 'A FAZER', doing: 'EM ANDAMENTO', done: 'CONCLUÍDO!',
+      todo: 'A Fazer', doing: 'Em Andamento', done: 'Concluído',
       addTask: 'ADICIONAR TAREFA', addTaskLabel: 'Adicionar tarefa', garbage: 'Lixeira',
       garbageHint: 'Arraste uma tarefa aqui para removê-la',
       sloganFirst: 'um simples', sloganSecond: 'quadro kanban',
@@ -26,8 +28,9 @@
       exampleDone: 'Esta é uma tarefa concluída! (Experimente removê-la pelo botão de excluir.)'
     },
     es: {
+      myTasks: 'Mis tareas', tasksSubtitle: 'Organiza tu día de forma sencilla.',
       language: 'Idioma', menuLabel: 'Menú de idiomas',
-      todo: 'POR HACER', doing: 'EN CURSO', done: '¡HECHO!',
+      todo: 'Por hacer', doing: 'En curso', done: 'Completado',
       addTask: 'AÑADIR TAREA', addTaskLabel: 'Añadir tarea', garbage: 'Papelera',
       garbageHint: 'Arrastra una tarea aquí para eliminarla',
       sloganFirst: 'un sencillo', sloganSecond: 'tablero kanban',

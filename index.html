@@ -14,6 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@200;300;400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./css/style.css">
   <link rel="stylesheet" href="./css/planner.css">
+  <link rel="stylesheet" href="./css/mindmap.css">
 </head>
 <body>
   <div class="language-menu">
@@ -23,11 +24,11 @@
     <div class="language-backdrop" aria-hidden="true"></div>
     <div id="language-panel" class="language-panel" inert aria-hidden="true">
       <div class="info">
-        <h1 class="logo">NAB<br/>NAK</h1>
+        <h1 class="logo">NABNAK</h1>
         <p class="slogan"><span data-i18n="sloganFirst">a simple</span> <span data-i18n="sloganSecond">kanban board</span></p>
       </div>
       <fieldset>
-        <legend data-i18n="language">Language</legend>
+        <legend><svg class="sidebar-section-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></svg><span data-i18n="language">Language</span></legend>
         <label><input type="radio" name="language" value="pt-BR"><span lang="pt-BR">Português (Brasil)</span></label>
         <label><input type="radio" name="language" value="en" checked><span lang="en">English</span></label>
         <label><input type="radio" name="language" value="es"><span lang="es">Español</span></label>
@@ -35,11 +36,17 @@
       <nav class="planner-nav" aria-label="Views" data-i18n-label="views">
         <button id="open-calendar" type="button" data-i18n="calendar">Calendar</button>
         <button id="open-goals" type="button" data-i18n="goals">Goals</button>
+        <button id="open-mindmaps" type="button" data-i18n="mmMaps">Mind maps</button>
       </nav>
     </div>
   </div>
+  <main class="workspace" aria-labelledby="workspace-title">
+  <header class="workspace-header">
+    <h1 id="workspace-title" data-i18n="myTasks">My tasks</h1>
+    <p data-i18n="tasksSubtitle">Organize your day with ease.</p>
+  </header>
   <section class="task" aria-labelledby="add-task-heading">
-      <h2 id="add-task-heading"><label for="task" data-i18n="addTask">ADD TASK</label></h2>
+      <h2 id="add-task-heading"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 7v10M7 12h10"/></svg><label for="task" data-i18n="addTaskLabel">Add task</label></h2>
       <form id="addTask" action="POST">
         <input id="task" name="task" type="text" autocomplete="off" placeholder="What do you need to do?" data-i18n-placeholder="taskPrompt" required>
         <div class="task-toolbar">
@@ -60,7 +67,10 @@
   <div class="boards">
     <!-- Quadro de tarefas para fazer -->
     <div class="board">
-      <h2 data-i18n="todo">TO-DO</h2>
+      <h2 class="board-heading">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5h13M8 12h13M8 19h9"/><circle cx="3" cy="5" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="19" r="1"/></svg>
+        <span data-i18n="todo">To do</span><span class="board-count" aria-label="Tasks: 0">0</span>
+      </h2>
       <div class="dropZone" id="todo">
         <!-- Cartões de tarefas -->
         <div class="card" draggable="true">
@@ -71,7 +81,10 @@
     </div>
     <!-- Quadro de tarefas sendo feitas -->
     <div class="board">
-      <h2 data-i18n="doing">DOING</h2>
+      <h2 class="board-heading">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>
+        <span data-i18n="doing">In progress</span><span class="board-count" aria-label="Tasks: 0">0</span>
+      </h2>
       <div class="dropZone" id="doing">
         <div class="card" draggable="true">
           <div class="status doing"></div>
@@ -82,7 +95,10 @@
     </div>
     <!-- Quadro de tarefas já feitas -->
     <div class="board">
-      <h2 data-i18n="done">DONE!</h2>
+      <h2 class="board-heading">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8"/><path d="m8 12 3 3 5-6"/></svg>
+        <span data-i18n="done">Done</span><span class="board-count" aria-label="Tasks: 0">0</span>
+      </h2>
       <div class="dropZone" id="done">
         <div class="card" draggable="true">
           <div class="status done"></div>
@@ -93,7 +109,44 @@
     </div>
   </div>
   <p id="storage-warning" class="storage-warning" role="alert" hidden></p>
+  </main>
 
+
+  <section id="mindmap-view" class="mm-view" aria-labelledby="mm-heading" hidden>
+    <header class="mm-header">
+      <button id="mm-back" type="button" data-i18n="mmBack">Back to tasks</button>
+      <h2 id="mm-heading" data-i18n="mmMaps">Mind maps</h2>
+      <select id="mm-map-select" data-i18n-label="mmChoose" aria-label="Choose a map"></select>
+      <input id="mm-map-name" type="text" maxlength="200" data-i18n-label="mmMapName" aria-label="Map name">
+      <button id="mm-new" class="mm-primary" type="button" data-i18n="mmNew">New map</button>
+    </header>
+    <div class="mm-body">
+      <div id="mm-viewport" class="mm-viewport" tabindex="0" data-i18n-label="mmCanvas" aria-label="Mind map workspace">
+        <div id="mm-world" class="mm-world"><svg id="mm-edges" class="mm-edges" aria-hidden="true"></svg><div id="mm-nodes"></div></div>
+        <p id="mm-empty" class="mm-empty" data-i18n="mmEmpty">Create a map to begin.</p>
+      </div>
+      <aside class="mm-inspector" aria-labelledby="mm-details-heading">
+        <h3 id="mm-details-heading" data-i18n="mmSelection">Idea details</h3>
+        <p id="mm-selection-hint" data-i18n="mmSelectHint">Select an idea to edit its details.</p>
+        <div id="mm-node-fields" hidden>
+          <label><span data-i18n="mmTitle">Idea title</span><textarea id="mm-title" rows="2"></textarea></label>
+          <label><span data-i18n="mmDescription">Description (optional)</span><textarea id="mm-description" rows="3"></textarea></label>
+          <label><span data-i18n="mmColor">Branch color</span><input id="mm-color" type="color" value="#fd951f"></label>
+          <div class="mm-node-actions">
+            <button id="mm-collapse" type="button" data-i18n="mmCollapse">Collapse / expand branch</button>
+            <button id="mm-duplicate" type="button" data-i18n="mmDuplicate">Duplicate idea</button>
+            <button id="mm-task" type="button" data-i18n="mmTask">Create task from this idea</button>
+            <button id="mm-delete" class="mm-danger" type="button" data-i18n="mmDelete">Delete idea and descendants</button>
+          </div>
+        </div>
+        <label id="mm-connections-label" hidden><span data-i18n="mmConnections">Connections</span><select id="mm-connection-select" data-i18n-label="mmChooseConnection" aria-label="Choose a connection"></select></label>
+        <button id="mm-remove-edge" class="mm-danger" type="button" data-i18n="mmRemoveEdge" hidden>Remove connection</button>
+      </aside>
+    </div>
+    <div id="mm-toolbar" class="mm-toolbar" role="toolbar" data-i18n-label="mmMaps" aria-label="Mind maps"></div>
+    <footer class="mm-footer"><p id="mm-help" data-i18n="mmHelp"></p><p id="mm-message" role="status" aria-live="polite"></p></footer>
+    <div id="mm-measure" class="mm-measure" aria-hidden="true"></div>
+  </section>
 
   <dialog id="calendar-dialog" class="planner-dialog" aria-labelledby="calendar-title">
     <header class="planner-header"><h2 id="calendar-title" data-i18n="calendar">Calendar</h2><button type="button" data-close-dialog data-i18n-label="close" aria-label="Close">×</button></header>
@@ -143,9 +196,12 @@
 
   <script src="./js/store.js" defer></script>
   <script src="./js/planner-translations.js" defer></script>
+  <script src="./js/mindmap-translations.js" defer></script>
   <script src="./js/i18n.js" defer></script>
   <script src="./js/script.js" defer></script>
   <script src="./js/task-form.js" defer></script>
   <script src="./js/planner.js" defer></script>
+  <script src="./js/mindmap-data.js" defer></script>
+  <script src="./js/mindmap.js" defer></script>
 </body>
 </html>

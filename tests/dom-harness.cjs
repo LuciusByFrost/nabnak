@@ -14,6 +14,7 @@ class Element {
     this.tagName = tag; this.attrs = attrs; this.doc = doc; this.children = []; this.listeners = {};
     this.checked = Object.hasOwn(attrs, 'checked'); this.hidden = Object.hasOwn(attrs, 'hidden'); this.inert = Object.hasOwn(attrs, 'inert');
     this.open = false;
+    this.style = {setProperty(name, value) { this[name] = value; }};
     this.classList = {
       contains: name => this.className.split(/\s+/).includes(name),
       add: (...names) => { this.className = [...new Set(this.className.split(/\s+/).filter(Boolean).concat(names))].join(' '); },
@@ -68,6 +69,10 @@ class Element {
   }
   fire(type, init = {}) { return this.dispatchEvent(new TestEvent(type, init)); }
   focus() { this.doc.activeElement = this; }
+  blur() { this.doc.activeElement = this.doc.body; this.fire('blur'); }
+  remove() { this.parent?.removeChild(this); }
+  setPointerCapture() {}
+  releasePointerCapture() {}
   click() {
     this.focus();
     if (this.tagName === 'input' && this.attrs.type === 'radio') {
@@ -102,7 +107,7 @@ function boot(data = new Map()) {
   parse(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), document, document);
   document.documentElement = document.querySelector('html'); document.body = document.querySelector('body'); document.activeElement = document.body;
   const storage = {getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value)};
-  const context = vm.createContext({document, console, Intl, Date, Event: TestEvent, setInterval() {}, localStorage: storage, confirm: () => true});
+  const context = vm.createContext({document, console, Intl, Date, Event: TestEvent, setInterval() {}, setTimeout(fn) { fn(); return 0; }, clearTimeout() {}, addEventListener(type, fn) { document.addEventListener('window:' + type, fn); }, localStorage: storage, confirm: () => true});
   context.window = context;
   for (const script of document.querySelectorAll('script')) vm.runInContext(fs.readFileSync(path.join(ROOT, script.attrs.src), 'utf8'), context, {filename: script.attrs.src});
   return {document, context, data, $: id => document.getElementById(id)};

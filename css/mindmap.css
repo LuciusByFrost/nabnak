@@ -1,0 +1,66 @@
+/* Everything is scoped to the map view. The Kanban and planner retain their styles. */
+.mm-view[hidden], .mm-view [hidden] { display: none !important; }
+.mm-view { position: fixed; inset: 0; z-index: 5; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; background: #151416; color: #f3f0ed; color-scheme: dark; }
+.mm-view button, .mm-view select, .mm-view input, .mm-view textarea { font: inherit; color: inherit; background: #242123; border: 1px solid #ffffff20; border-radius: 8px; padding: 9px 11px; min-height: 44px; }
+.mm-view button { cursor: pointer; }
+.mm-view button:hover { border-color: #fd951f88; }
+.mm-view button:disabled { opacity: .35; cursor: default; }
+.mm-view :focus-visible { outline: 2px solid #ffb45e; outline-offset: 3px; }
+.mm-view .mm-primary { background: #fd951f; color: #171311; font-weight: 800; border-color: #fd951f; }
+.mm-view .mm-danger { color: #f2a39e; }
+.mm-header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 16px 76px 16px 20px; border-bottom: 1px solid #ffffff12; }
+.mm-header h2 { font-size: 1.125rem; color: #fdad53; }
+.mm-header select { max-width: 190px; min-width: 100px; }
+.mm-header input { flex: 1; min-width: 120px; max-width: 320px; }
+.mm-body { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 264px; }
+.mm-viewport { position: relative; overflow: hidden; min-width: 0; min-height: 0; cursor: grab; touch-action: none; background-color: #19181b; background-image: radial-gradient(circle, #ffffff1a 1px, transparent 1px); background-size: 24px 24px; }
+.mm-viewport.is-dragging { cursor: grabbing; }
+.mm-viewport.is-connecting, .mm-viewport.is-connecting .mm-node { cursor: crosshair; }
+.mm-world { position: absolute; left: 0; top: 0; width: 1px; height: 1px; transform-origin: 0 0; }
+.mm-edges { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: visible; }
+.mm-edge { fill: none; stroke-width: 2.5; opacity: .7; pointer-events: none; }
+.mm-edge.is-selected { stroke-width: 4; opacity: 1; }
+.mm-edge-hit { fill: none; stroke: transparent; stroke-width: 18; pointer-events: stroke; cursor: pointer; }
+.mm-node { position: absolute; box-sizing: border-box; border: 1px solid var(--idea-color, #fd951f); border-left-width: 4px; border-radius: 12px; background: #252326; padding: 14px 16px; box-shadow: 0 3px 10px #0003; cursor: grab; user-select: none; touch-action: none; }
+.mm-node.is-root { background: #30271f; border-width: 2px; font-weight: 800; }
+.mm-node.is-selected { outline: 2px solid var(--idea-color, #fd951f); outline-offset: 4px; }
+.mm-node-title { font-size: 1rem; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-wrap; }
+.mm-node.is-root .mm-node-title { font-size: 1.2rem; }
+.mm-node-title[contenteditable="true"] { cursor: text; user-select: text; touch-action: auto; outline: 1px solid #fd951f88; border-radius: 3px; }
+.mm-node-description { margin-top: 8px; color: #bbb6bd; font-size: .875rem; line-height: 1.4; overflow-wrap: anywhere; white-space: pre-wrap; }
+.mm-collapsed { margin-top: 8px; font-size: .8125rem; color: #f0c18d; }
+.mm-inspector { padding: 20px 16px; border-left: 1px solid #ffffff12; overflow-y: auto; min-height: 0; background: #1c1a1d; }
+.mm-inspector h3 { font-size: 1rem; margin-bottom: 16px; }
+.mm-inspector p { color: #bcb5bf; line-height: 1.5; font-size: .875rem; }
+.mm-inspector label { display: grid; gap: 6px; margin-bottom: 14px; font-size: .875rem; }
+.mm-inspector input, .mm-inspector textarea, .mm-inspector select { width: 100%; min-width: 0; }
+.mm-inspector textarea { resize: vertical; }
+.mm-node-actions { display: grid; gap: 8px; }
+.mm-node-actions button { text-align: left; font-size: .875rem; }
+.mm-toolbar { display: flex; align-items: center; gap: 6px; width: max-content; max-width: calc(100% - 24px); margin: 12px auto 0; padding: 7px; overflow-x: auto; border: 1px solid #fd951f30; border-radius: 12px; background: #242123; box-shadow: 0 3px 12px #0003; }
+.mm-toolbar button { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 10px; flex-shrink: 0; background: transparent; border-color: transparent; }
+.mm-toolbar button[aria-pressed="true"] { background: #fd951f24; border-color: #fd951f88; color: #ffb45e; }
+.mm-toolbar svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.mm-toolbar output { font-size: .8125rem; min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; }
+.mm-toolbar select { max-width: 85px; padding: 8px; }
+.mm-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 20px; padding: 10px 20px; color: #b4adb6; font-size: .8125rem; line-height: 1.4; }
+.mm-footer p { min-width: 0; overflow-wrap: anywhere; }
+.mm-footer #mm-message { color: #f4be82; }
+.mm-empty { position: absolute; top: 45%; left: 0; width: 100%; text-align: center; pointer-events: none; color: #b5acb7; }
+.mm-measure { position: fixed; visibility: hidden; pointer-events: none; top: 0; left: -10000px; }
+.mm-measure .mm-node { position: static; }
+@media (min-width: 1280px) { body:has(.language-menu.is-open) .mm-view { right: 320px; } }
+@media (max-width: 800px) {
+  .mm-header { padding: 12px 72px 12px 12px; gap: 8px; }
+  .mm-header h2 { display: none; }
+  .mm-header select { max-width: 130px; }
+  .mm-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .mm-inspector { max-height: 26dvh; padding: 12px; border-left: 0; border-top: 1px solid #ffffff12; }
+  .mm-inspector h3 { margin-bottom: 8px; }
+  .mm-node-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mm-node-actions button { overflow-wrap: anywhere; }
+  .mm-toolbar { margin-top: 8px; }
+  .mm-footer { padding: 8px 12px; }
+  #mm-help { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .mm-world { transition: none; } }

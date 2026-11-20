@@ -7,6 +7,7 @@ const {boot} = require('./dom-harness.cjs');
 test('new interface dictionaries have identical keys and nonempty values in all three languages', () => {
   const context = vm.createContext({window: {}});
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/planner-translations.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/mindmap-translations.js'), 'utf8'), context);
   const dictionaries = context.window.NabnakMessages, keys = Object.keys(dictionaries.en).sort();
   for (const lang of ['en', 'pt-BR', 'es']) {
     assert.deepEqual(Object.keys(dictionaries[lang]).sort(), keys);
@@ -19,7 +20,7 @@ test('every marked label and interface message resolves in all supported languag
   for (const marker of ['data-i18n', 'data-i18n-label', 'data-i18n-alt', 'data-i18n-title', 'data-i18n-content', 'data-i18n-placeholder']) {
     document.querySelectorAll(`[${marker}]`).forEach(element => keys.add(element.getAttribute(marker)));
   }
-  const scripts = ['store.js', 'planner.js', 'script.js', 'task-form.js'].map(file => fs.readFileSync(path.join(__dirname, '../js', file), 'utf8')).join('\n');
+  const scripts = ['store.js', 'planner.js', 'script.js', 'task-form.js', 'mindmap.js'].map(file => fs.readFileSync(path.join(__dirname, '../js', file), 'utf8')).join('\n');
   for (const match of scripts.matchAll(/(?:\bt\(|throw new Error\()['"]([A-Za-z]+)['"]/g)) if (!['unsupported', 'invalidTasks', 'invalidGoals', 'unavailable'].includes(match[1])) keys.add(match[1]);
   for (const lang of ['en', 'pt-BR', 'es']) {
     document.querySelector(`input[value="${lang}"]`).click();

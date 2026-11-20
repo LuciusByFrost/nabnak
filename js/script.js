@@ -32,6 +32,24 @@
   window.NabnakTaskTitle = titleFor;
   const displayDate = value => new Intl.DateTimeFormat(NabnakI18n.locale, {dateStyle: 'medium'}).format(dateObject(value));
   window.NabnakDisplayDate = displayDate;
+  // Board badges only format existing metadata; the stored task is unchanged.
+  function metadataBadge(className, text, kind) {
+    const badge = document.createElement('span'); badge.className = className;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
+    const shapes = kind === 'goal'
+      ? [['circle', {cx: 12, cy: 12, r: 9}], ['circle', {cx: 12, cy: 12, r: 5}], ['circle', {cx: 12, cy: 12, r: 1}]]
+      : kind === 'completed'
+        ? [['circle', {cx: 12, cy: 12, r: 9}], ['path', {d: 'm7 12 3 3 7-7'}]]
+        : [['rect', {x: 3, y: 5, width: 18, height: 16, rx: 2}], ['path', {d: 'M7 3v4M17 3v4M3 11h18'}]];
+    for (const [tag, attributes] of shapes) {
+      const shape = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      for (const [name, value] of Object.entries(attributes)) shape.setAttribute(name, String(value));
+      svg.append(shape);
+    }
+    const label = document.createElement('span'); label.textContent = text;
+    badge.append(svg, label); return badge;
+  }
   function endDrag() {
     zones.forEach(zone => zone.classList.remove('highlight', 'over'));
     draggedCard?.classList.remove('dragging'); draggedId = null; draggedCard = null;
@@ -44,7 +62,13 @@
     const emptyGoal = document.createElement('option'); emptyGoal.value = ''; emptyGoal.textContent = t('noGoal'); goalSelect.append(emptyGoal);
     snapshot.goals.forEach(goal => { const option = document.createElement('option'); option.value = goal.id; option.textContent = goal.title; goalSelect.append(option); });
     goalSelect.value = snapshot.goals.some(goal => goal.id === selectedGoal) ? selectedGoal : '';
-    for (const zone of zones) zone.replaceChildren();
+    for (const zone of zones) {
+      zone.replaceChildren();
+      const count = snapshot.tasks.filter(task => task.status === zone.id).length;
+      const counter = zone.parentElement.querySelector('.board-count');
+      counter.textContent = String(count);
+      counter.setAttribute('aria-label', `${t('tasksCount')}: ${count}`);
+    }
     for (const task of snapshot.tasks) {
       const card = document.createElement('div');
       card.className = 'card'; card.draggable = true; card.dataset.taskId = task.id;
@@ -67,15 +91,20 @@
         (nextCard?.querySelector('.card-delete') || document.getElementById('task')).focus();
       });
       const details = document.createElement('div'); details.className = 'card-details';
-      if (task.goalId) {
-        const label = document.createElement('span'); label.className = 'task-goal';
-        label.textContent = snapshot.goals.find(goal => goal.id === task.goalId)?.title || ''; details.append(label);
+      if (task.status === 'done') {
+        details.append(metadataBadge('date-badge completed completion-badge', t('completed'), 'completed'));
       }
-      if (task.dueDate || task.status === 'done') {
-        const badge = document.createElement('span'); const state = taskState(task);
-        badge.className = `date-badge ${state}`;
-        badge.textContent = `${t(state)}${task.dueDate ? ' - ' + displayDate(task.dueDate) : ''}`;
+      if (task.dueDate) {
+        const state = taskState(task);
+        const shortDate = new Intl.DateTimeFormat(NabnakI18n.locale, {dateStyle: 'short'}).format(dateObject(task.dueDate));
+        const badge = metadataBadge(`date-badge task-date ${state === 'completed' ? '' : state}`, shortDate, 'date');
+        const description = `${t(state)} - ${displayDate(task.dueDate)}`;
+        badge.setAttribute('aria-label', description); badge.setAttribute('title', description);
         details.append(badge);
+      }
+      if (task.goalId) {
+        const goal = snapshot.goals.find(goal => goal.id === task.goalId);
+        if (goal) details.append(metadataBadge('task-goal', goal.title, 'goal'));
       }
       const edit = document.createElement('button'); edit.type = 'button'; edit.className = 'card-action card-edit';
       edit.setAttribute('aria-label', `${t('editTask')}: ${titleFor(task)}`); edit.setAttribute('title', t('editTask'));
