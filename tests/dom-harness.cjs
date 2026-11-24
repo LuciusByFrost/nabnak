@@ -99,7 +99,7 @@ function parse(html, root, doc) {
     } else stack.at(-1).children.push(token);
   }
 }
-function boot(data = new Map()) {
+function boot(data = new Map(), preferences = {}) {
   const document = new Element('document'); document.doc = document;
   document.getElementById = id => document.querySelector('#' + id);
   document.createElement = tag => new Element(tag, {}, document);
@@ -107,9 +107,15 @@ function boot(data = new Map()) {
   parse(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), document, document);
   document.documentElement = document.querySelector('html'); document.body = document.querySelector('body'); document.activeElement = document.body;
   const storage = {getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value)};
-  const context = vm.createContext({document, console, Intl, Date, Event: TestEvent, setInterval() {}, setTimeout(fn) { fn(); return 0; }, clearTimeout() {}, addEventListener(type, fn) { document.addEventListener('window:' + type, fn); }, localStorage: storage, confirm: () => true});
+  const media = [];
+  function matchMedia(query) {
+    const listeners = [];
+    const result = {query, matches: query.includes('min-width') ? (preferences.width || 375) >= Number(query.match(/min-width: (\d+)/)[1]) : preferences.colorScheme === 'dark', addEventListener(_type, listener) { listeners.push(listener); }, change(matches) { this.matches = matches; listeners.forEach(listener => listener(this)); }};
+    media.push(result); return result;
+  }
+  const context = vm.createContext({document, console, Intl, Date, Event: TestEvent, matchMedia, setInterval() {}, setTimeout(fn) { fn(); return 0; }, clearTimeout() {}, addEventListener(type, fn) { document.addEventListener('window:' + type, fn); }, localStorage: storage, confirm: () => true});
   context.window = context;
   for (const script of document.querySelectorAll('script')) vm.runInContext(fs.readFileSync(path.join(ROOT, script.attrs.src), 'utf8'), context, {filename: script.attrs.src});
-  return {document, context, data, $: id => document.getElementById(id)};
+  return {document, context, data, media, $: id => document.getElementById(id)};
 }
 module.exports = {boot};

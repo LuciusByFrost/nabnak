@@ -79,7 +79,7 @@ test('connections can be selected from a native keyboard/touch control and remov
 });
 test('Tab and Delete apply only outside text editing; direct title editing commits safely', () => {
   const {$, map, element, document, editor} = fixture(); const root = map().rootId;
-  document.fire('keydown', {key: 'Tab', target: element(root)}); assert.equal(map().nodes.length, 2);
+  $('mm-edit-mode').checked = true; document.fire('keydown', {key: 'Tab', target: element(root)}); assert.equal(map().nodes.length, 2);
   const child = map().nodes[1]; const input = $('mm-title'); input.value = 'Keep editing';
   document.fire('keydown', {key: 'Delete', target: input}); assert.equal(map().nodes.length, 2);
   const title = element(child.id).querySelector('.mm-node-title'); title.fire('dblclick'); title.textContent = 'Directly edited'; title.fire('blur');
@@ -124,7 +124,7 @@ test('map keyboard commands ignore sidebar controls, dialogs and editable fields
   const {$, map, element, document, editor} = fixture(); $('mm-add').click();
   const child = map().nodes[1], root = map().nodes[0];
   document.fire('keydown', {key: 'Delete', target: $('open-calendar')}); assert.equal(map().nodes.length, 2);
-  $('open-calendar').click(); document.fire('keydown', {key: 'Delete', target: element(child.id)}); assert.equal(map().nodes.length, 2); $('calendar-dialog').close();
+  $('open-calendar').click(); document.fire('keydown', {key: 'Delete', target: element(child.id)}); assert.equal(map().nodes.length, 2); $('open-mindmaps').click();
   editor.select(root.id); document.fire('keydown', {key: 'ArrowRight', target: element(root.id)}); assert.equal($('mm-title').value, child.title);
   document.fire('keydown', {key: 'z', ctrlKey: true, target: element(child.id)}); assert.equal(map().nodes.length, 1);
   document.fire('keydown', {key: 'z', ctrlKey: true, shiftKey: true, target: $('mm-viewport')}); assert.equal(map().nodes.length, 2);
@@ -140,8 +140,8 @@ for (const language of ['pt-BR', 'en', 'es']) {
     assert.equal(context.NabnakStore.getState().tasks.length, originalTasks + 1); assert.equal(map().nodes.length, nodeCount);
     assert.equal(map().nodes[1].title, 'User-authored idea');
     assert.equal($('mm-add').getAttribute('title'), context.NabnakI18n.t('mmAdd'));
-    $('open-calendar').click(); assert.equal($('calendar-dialog').open, true); $('calendar-dialog').close();
-    $('open-goals').click(); assert.equal($('goals-dialog').open, true);
+    $('open-calendar').click(); assert.equal($('calendar-dialog').hidden, false); $('open-mindmaps').click();
+    $('open-goals').click(); assert.equal($('goals-dialog').hidden, false);
     assert.ok(context.NabnakStore.getState().tasks.some(task => task.title === 'Confirmed task'));
   });
 }

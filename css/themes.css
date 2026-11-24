@@ -1,0 +1,118 @@
+/* Visual skins only. No application layout or original theme rules are replaced. */
+:root[data-skin="lofi-cafe"] {
+  color-scheme: light;
+  --bg: #F5EFE5;
+  --sidebar: #E9DFCF;
+  --surface: #FFFAF0;
+  --surface-soft: #EEE4D5;
+  --surface-hover: #E6D7C5;
+  --border: #D8CBBB;
+  --control-border: #927C65;
+  --text: #514337;
+  --muted: #6D5E4E;
+  --accent: #7C492C;
+  --accent-solid: #B77955;
+  --accent-ink: #24160D;
+  --accent-soft: #EFDFCC;
+  --accent-hover: #C28A67;
+  --focus: #7C492C;
+  --success: #4E6545;
+  --sage: #829477;
+  --positive-fill: #647A57;
+  --success-soft: #E3E9DA;
+  --danger: #9C3540;
+  --danger-soft: #F4E3DA;
+  --warning: #7A571C;
+  --warning-soft: #F2E5CE;
+  --shadow: 0 5px 16px #51433712;
+  --card-shadow: 0 2px 5px #5143370a, inset 0 1px 0 #ffffff88;
+  --card-corners: 10px 7px 11px 8px;
+  --paper-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='%23514337' opacity='.045'%3E%3Ccircle cx='7' cy='12' r='.65'/%3E%3Ccircle cx='43' cy='35' r='.55'/%3E%3Ccircle cx='76' cy='19' r='.6'/%3E%3Ccircle cx='23' cy='72' r='.5'/%3E%3Ccircle cx='81' cy='84' r='.6'/%3E%3C/g%3E%3Cpath d='M12 48h9m44 19h5M33 8h4' stroke='%23514337' stroke-opacity='.025'/%3E%3C/svg%3E");
+  --atmosphere: var(--paper-texture);
+  --canvas-pattern: radial-gradient(circle, #D8CBBB .7px, transparent .7px);
+  --scene-image: url('../assets/themes/lofi-cafe.jpg');
+  --scene-sidebar-image: url('../assets/themes/lofi-cafe-sidebar.jpg');
+  --scene-opacity: .72;
+}
+:root[data-skin="lofi-midnight"] {
+  color-scheme: dark;
+  --bg: #191D2B;
+  --sidebar: #11131C;
+  --surface: #242938;
+  --surface-soft: #202535;
+  --surface-hover: #2B3246;
+  --border: #33394D;
+  --control-border: #727C9C;
+  --text: #E0E3EF;
+  --muted: #A6ADC5;
+  --accent: #939BC5;
+  --accent-solid: #939BC5;
+  --accent-ink: #161A27;
+  --accent-soft: #282E41;
+  --accent-hover: #A7AFD5;
+  --focus: #BBC4EC;
+  --success: #85A99B;
+  --positive-fill: #85A99B;
+  --success-soft: #263733;
+  --danger: #F0A7AE;
+  --danger-soft: #372D3B;
+  --warning: #DCC18A;
+  --warning-soft: #363329;
+  --shadow: 0 6px 20px #080B1440;
+  --card-shadow: 0 3px 10px #080B1426, inset 0 1px 0 #939bc50a;
+  --card-corners: 10px;
+  --atmosphere: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cpath d='m20 8-3 11m66 26-3 11m49 47-3 11m-86 7-2 7' stroke='%23939BC5' stroke-opacity='.045' stroke-width='.7'/%3E%3C/svg%3E");
+  --paper-texture: none;
+  --canvas-pattern: radial-gradient(circle, #33394D .7px, transparent .7px);
+  --scene-image: url('../assets/themes/lofi-midnight.jpg');
+  --scene-sidebar-image: url('../assets/themes/lofi-midnight-sidebar.jpg');
+  --scene-opacity: .65;
+}
+
+/* Every skin rule is opt-in: Original retains the existing CSS unchanged. */
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"]) body { background-image: var(--atmosphere); }
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"]) .language-panel { background: var(--sidebar); }
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"]) .sidebar-section-icon { color: var(--accent); }
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"]) :is(.card, .goal-card, .calendar-month-view, .calendar-agenda, .mm-node) {
+  box-shadow: var(--card-shadow); background-image: var(--paper-texture); border-radius: var(--card-corners);
+}
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"]) .mm-viewport { background-image: var(--canvas-pattern); }
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"]) .task #addTask .task-add-button:hover,
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"]) .planner-dialog .primary:hover,
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"]) .mm-view .mm-primary:hover { background: var(--accent-hover); }
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"]) .card .date-badge.overdue { background: var(--danger-soft); border-color: var(--danger); }
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"]) .card .date-badge.dueToday { background: var(--warning-soft); border-color: var(--warning); }
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"]) .card .completion-badge { background: var(--success-soft); border-color: var(--success); }
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"]) .goal-card progress { accent-color: var(--positive-fill); }
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"]) .goal-card progress::-webkit-progress-value { background: var(--positive-fill); }
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"]) .goal-card progress::-moz-progress-bar { background: var(--positive-fill); }
+:root[data-skin="lofi-cafe"] :is(.workspace-header h1, .planner-header h1) { font-family: Georgia, 'Times New Roman', serif; letter-spacing: -.015em; }
+:root[data-skin="lofi-cafe"] .board { border-style: dashed; }
+:root[data-skin="lofi-cafe"] .board h2 { border-bottom-style: dotted; }
+:root[data-skin="lofi-cafe"] .goal-completed { box-shadow: inset 0 2px 0 var(--sage), var(--card-shadow); }
+:root[data-skin="lofi-midnight"] :is(.task, .mm-toolbar, .mm-inspector) { box-shadow: inset 0 1px 0 #939bc50a; }
+
+/* Local raster scenes paint existing empty areas; no layout space is added. */
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"])[data-illustrations="on"] body { isolation: isolate; }
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"])[data-illustrations="on"] body::before {
+  content: ''; position: fixed; right: 0; bottom: 0; width: min(78vw, 1050px); aspect-ratio: 3 / 2;
+  background: var(--scene-image) center / cover no-repeat;
+  opacity: var(--scene-opacity); pointer-events: none; z-index: -1;
+  mask-image: radial-gradient(ellipse at 80% 90%, #000 25%, #000c 55%, transparent 78%);
+}
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"])[data-illustrations="on"] :is(.task-filters, .calendar-heading, .storage-warning) { background-color: var(--bg); }
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"])[data-illustrations="on"] .sidebar-preferences { position: relative; }
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"])[data-illustrations="on"] .sidebar-preferences::before {
+  content: ''; position: absolute; top: calc(4px - var(--lofi-sidebar-free, 0px)); left: 0; right: 0; height: calc(24px + var(--lofi-sidebar-free, 0px)); border-radius: 6px;
+  background: var(--scene-sidebar-image) center 70% / cover no-repeat;
+  box-shadow: inset 0 0 0 1px var(--border); pointer-events: none;
+}
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"])[data-illustrations="on"] .mm-viewport::before {
+  content: ''; position: absolute; right: 0; bottom: 0; width: min(75%, 600px); height: 75%;
+  background: var(--scene-image) right bottom / contain no-repeat; opacity: .24; pointer-events: none;
+  mask-image: radial-gradient(ellipse at 80% 90%, #000 30%, transparent 80%);
+}
+:root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"])[data-illustrations="on"] .mm-empty { background-color: var(--bg); }
+@media (max-width: 800px) {
+  :root:is([data-skin="lofi-cafe"], [data-skin="lofi-midnight"])[data-illustrations="on"] body::before { width: 100vw; height: min(55vh, 420px); aspect-ratio: auto; opacity: .45; }
+}

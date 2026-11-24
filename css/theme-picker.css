@@ -1,0 +1,23 @@
+/* Appearance controls remain active during skin comparisons. */
+/* Compact previews stay inside the existing appearance area. */
+.theme-options { margin-top: 16px; }
+.theme-option {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px;
+  padding: 8px; margin-top: 4px; font: inherit; font-size: .8125rem; text-align: left;
+  color: var(--text); background: transparent; border: 1px solid var(--border); border-radius: 8px;
+}
+.theme-option:hover { background: var(--surface-soft); }
+.theme-option[aria-pressed="true"] { border-color: var(--focus); background: var(--accent-soft); font-weight: 800; }
+.theme-preview { flex: 0 0 42px; height: 26px; display: flex; gap: 3px; padding: 4px; border: 1px solid var(--preview-border); border-radius: 4px; background: var(--preview-bg); }
+.theme-preview > span:first-child { width: 7px; background: var(--preview-sidebar); border-right: 1px solid var(--preview-border); }
+.theme-preview > span:nth-child(2) { flex: 1; background: var(--preview-card); border: 1px solid var(--preview-border); border-radius: 2px; }
+.theme-preview > span:last-child { width: 4px; height: 4px; margin-top: 2px; background: var(--preview-accent); border-radius: 50%; }
+.preview-original { --preview-bg: #f6f6f5; --preview-sidebar: #ffffff; --preview-card: #ffffff; --preview-border: #dadad6; --preview-accent: #f59a42; }
+:root[data-original-mode="dark"] .preview-original { --preview-bg: #171717; --preview-sidebar: #202020; --preview-card: #292929; --preview-border: #3d3d39; }
+.preview-cafe { --preview-bg: #F5EFE5; --preview-sidebar: #E9DFCF; --preview-card: #FFFAF0; --preview-border: #D8CBBB; --preview-accent: #B77955; background-image: repeating-linear-gradient(0deg, transparent 0 5px, #5143370a 5px 6px); }
+.preview-midnight { --preview-bg: #191D2B; --preview-sidebar: #11131C; --preview-card: #242938; --preview-border: #33394D; --preview-accent: #939BC5; }
+.theme-mode-hint { font-size: .8125rem; line-height: 1.4; color: var(--muted); margin-top: 6px; }
+.language-panel .theme-illustration-label { align-items: flex-start; font-size: .8125rem; margin-top: 8px; }
+.theme-illustration-label input { margin-top: 3px; }
+#theme-select:disabled { opacity: 1; color: var(--muted); cursor: default; }
+

@@ -1,0 +1,16 @@
+{
+  "name": "nabnak",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static Kanban, calendar, goals and mind maps. No runtime dependencies.",
+  "scripts": {
+    "test": "node --test --test-isolation=none tests/*.test.cjs",
+    "test:browser": "node tests/browser/validate.cjs",
+    "test:themes": "node tests/browser/themes.cjs",
+    "serve": "node tools/serve.cjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.0"
+  },
+  "engines": { "node": ">=24" }
+}

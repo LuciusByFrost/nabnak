@@ -59,7 +59,18 @@
       row.append(text, edit); list.append(row);
     });
     $('calendar-legend').replaceChildren(...['overdue', 'dueToday', 'completed', 'upcoming'].map(state => make('span', `date-badge ${state}`, t(state))));
+    dates.querySelectorAll('button').forEach(button => { button.tabIndex = button.dataset.date === selected ? 0 : -1; });
   }
+  $('calendar-days').addEventListener('keydown', event => {
+    const button = event.target.closest('button'); if (!button?.dataset.date) return;
+    const offset = {ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7}[event.key];
+    if (offset === undefined) return;
+    event.preventDefault();
+    const date = dateObject(button.dataset.date); date.setDate(date.getDate() + offset);
+    const value = localDay(date); if (!NabnakData.validDate(value)) return;
+    selected = value; month = value.slice(0, 7); renderCalendar();
+    $('calendar-days').querySelector(`[data-date="${value}"]`).focus();
+  });
   function editTask(id = null, dueDate = '', goalId = '') {
     editingId = id;
     const task = id ? store.getState().tasks.find(task => task.id === id) : null;
@@ -76,7 +87,7 @@
     $('delete-task').hidden = !task; $('task-error').textContent = '';
     show(editor); $('edit-task-title').focus();
   }
-  $('open-calendar').addEventListener('click', () => { NabnakI18n.closeMenu(); renderCalendar(); show(calendar); });
+  $('open-calendar').addEventListener('click', () => { renderCalendar(); NabnakShell.show('calendar'); });
   $('calendar-new-task').addEventListener('click', () => editTask(null, selected));
   for (const [id, offset] of [['previous-month', -1], ['next-month', 1], ['previous-year', -12], ['next-year', 12]]) {
     $(id).addEventListener('click', () => { month = shiftMonth(month, offset); selected = `${month}-01`; renderCalendar(); });
@@ -101,7 +112,7 @@
   });
   function focusGoal(goalId) {
     const card = Array.from($('goals-list').querySelectorAll('.goal-card')).find(card => card.dataset.goalId === goalId);
-    (card?.querySelector('h3') || $('new-goal')).focus();
+    (card?.querySelector('h2') || $('new-goal')).focus();
   }
   function renderGoals() {
     const list = $('goals-list'); list.replaceChildren();
@@ -110,7 +121,7 @@
     goals.forEach(goal => {
       const progress = NabnakData.goalProgress(goal, tasks);
       const card = make('article', `goal-card goal-${progress.state}`); card.dataset.goalId = goal.id;
-      const heading = make('h3', '', goal.title); heading.tabIndex = -1; card.append(heading);
+      const heading = make('h2', '', goal.title); heading.tabIndex = -1; card.append(heading);
       if (goal.description) card.append(make('p', 'goal-description', goal.description));
       card.append(make('span', `date-badge ${progress.state}`, `${t(progress.state)} · ${NabnakDisplayDate(goal.dueDate)}`));
       const bar = make('progress'); bar.max = 100; bar.value = progress.percent;
@@ -121,7 +132,7 @@
       const edit = make('button', '', t('editGoal')); edit.type = 'button'; edit.addEventListener('click', () => editGoal(goal.id));
       const add = make('button', '', t('newTask')); add.type = 'button'; add.addEventListener('click', () => editTask(null, '', goal.id));
       actions.append(edit, add); card.append(actions);
-      card.append(make('h4', '', t('associatedTasks')));
+      card.append(make('h3', '', t('associatedTasks')));
       const associated = tasks.filter(task => task.goalId === goal.id);
       if (!associated.length) card.append(make('p', 'empty-state', t('emptyGoalTasks')));
       associated.forEach(task => {
@@ -163,7 +174,7 @@
     $('delete-goal').hidden = !goal; $('goal-error').textContent = '';
     show(goalEditor); $('edit-goal-title').focus();
   }
-  $('open-goals').addEventListener('click', () => { NabnakI18n.closeMenu(); renderGoals(); show(goalsDialog); });
+  $('open-goals').addEventListener('click', () => { renderGoals(); NabnakShell.show('goals'); });
   $('new-goal').addEventListener('click', () => editGoal());
   $('goal-editor-form').addEventListener('submit', event => {
     event.preventDefault();
@@ -177,16 +188,16 @@
   $('delete-goal').addEventListener('click', () => {
     if (editingGoalId && window.confirm(t('deleteGoalConfirm'))) { store.deleteGoal(editingGoalId); goalEditor.close(); }
   });
-  goalEditor.addEventListener('close', () => { if (goalsDialog.open) focusGoal(editingGoalId); });
+  goalEditor.addEventListener('close', () => { if (!goalsDialog.hidden) focusGoal(editingGoalId); });
   editor.addEventListener('close', () => {
-    if (calendar.open) $('calendar-new-task').focus();
-    else if (goalsDialog.open) focusGoal(taskOriginGoal);
+    if (!calendar.hidden) $('calendar-new-task').focus();
+    else if (!goalsDialog.hidden) focusGoal(taskOriginGoal);
     else {
       const card = Array.from(document.querySelectorAll('.card')).find(card => card.dataset.taskId === editingId);
       (card?.querySelector('.card-edit') || $('task')).focus();
     }
   });
-  for (const dialog of [calendar, editor, goalsDialog, goalEditor]) {
+  for (const dialog of [editor, goalEditor]) {
     dialog.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', () => dialog.close()));
     dialog.addEventListener('click', event => {
       if (event.target !== dialog) return;
@@ -195,8 +206,8 @@
     });
   }
   function refresh() {
-    if (calendar.open) renderCalendar();
-    if (goalsDialog.open) renderGoals();
+    if (!calendar.hidden) renderCalendar();
+    if (!goalsDialog.hidden) renderGoals();
   }
   store.subscribe(refresh);
   document.addEventListener('nabnak:languagechange', () => {

@@ -50,6 +50,9 @@
   const backdrop = menu.querySelector('.language-backdrop');
   const toggleIcon = toggle.querySelector('[aria-hidden]');
   const options = panel.querySelectorAll('input[name="language"]');
+  const desktop = window.matchMedia?.('(min-width: 1100px)');
+  let sidebarPreference = true;
+  try { sidebarPreference = localStorage.getItem('nabnak.sidebar') !== 'collapsed'; } catch { /* Session only. */ }
 
   const markers = [
     ['data-i18n', null], ['data-i18n-label', 'aria-label'],
@@ -75,7 +78,7 @@
     document.dispatchEvent(new Event('nabnak:languagechange'));
   }
 
-  function setOpen(open, restoreFocus = false) {
+  function setOpen(open, restoreFocus = false, persist = false) {
     // Keep the panel rendered during exit; CSS delays visibility until it ends.
     if (!open && (restoreFocus || panel.contains(document.activeElement))) {
       toggle.focus();
@@ -83,19 +86,31 @@
     panel.inert = !open;
     panel.setAttribute('aria-hidden', String(!open));
     menu.classList.toggle('is-open', open);
+    document.body.setAttribute('data-sidebar', open ? 'open' : 'collapsed');
     toggle.setAttribute('aria-expanded', String(open));
     toggleIcon.textContent = open ? '×' : '☰';
-    if (open) panel.querySelector('input:checked').focus();
+    if (persist && desktop?.matches) {
+      sidebarPreference = open;
+      try { localStorage.setItem('nabnak.sidebar', open ? 'open' : 'collapsed'); } catch { /* Session only. */ }
+    }
+    for (const content of document.querySelectorAll('.workspace, .planner-view, .mm-view')) content.inert = open && !desktop?.matches;
+    if (open && !desktop?.matches) panel.querySelector('[aria-current="page"]')?.focus();
   }
 
-  toggle.addEventListener('click', () => setOpen(!menu.classList.contains('is-open')));
+  toggle.addEventListener('click', () => setOpen(!menu.classList.contains('is-open'), true, true));
   backdrop.addEventListener('click', () => setOpen(false));
   document.addEventListener('click', event => {
-    if (!menu.contains(event.target)) setOpen(false);
+    if (!desktop?.matches && !menu.contains(event.target)) setOpen(false);
   });
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && menu.classList.contains('is-open')) {
-      setOpen(false, true);
+    if (event.key === 'Escape' && menu.classList.contains('is-open') && (!desktop?.matches || menu.contains(event.target))) {
+      setOpen(false, true, true);
+    }
+    if (event.key === 'Tab' && !desktop?.matches && menu.classList.contains('is-open')) {
+      const controls = [toggle, ...panel.querySelectorAll('button, input, select')].filter(control => !control.disabled);
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     }
   });
   options.forEach(option => option.addEventListener('change', () => {
@@ -105,10 +120,12 @@
     }
   }));
 
-  window.NabnakI18n = {t, translate, get locale() { return document.documentElement.lang; }, closeMenu() { setOpen(false, true); }};
+  window.NabnakI18n = {t, translate, get locale() { return document.documentElement.lang; }, closeMenu() { if (!desktop?.matches) setOpen(false, true); }};
   let savedLanguage = 'en';
   try { savedLanguage = localStorage.getItem(storageKey) || 'en'; } catch {
     // Use English when browser storage is unavailable.
   }
   applyLanguage(savedLanguage);
+  setOpen(Boolean(desktop?.matches && sidebarPreference));
+  desktop?.addEventListener('change', () => setOpen(Boolean(desktop.matches && sidebarPreference)));
 })();

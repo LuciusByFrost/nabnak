@@ -5,18 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#fd951fcc"/>
   <title>NABNAK</title>
+  <script src="./js/theme.js"></script>
 
   <meta name="description" content="A simple kanban board." data-i18n-content="description">
   <meta name="keywords" content="Kanban, Quadro kanban, board kanban, metodologia ágil, drag and drop, JavaScript, Vanilla JS, HTML, HTML5, CSS, CSS3">
     
   <meta name="robots" content="index">
 
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@200;300;400;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/tokens.css">
   <link rel="stylesheet" href="./css/style.css">
   <link rel="stylesheet" href="./css/planner.css">
   <link rel="stylesheet" href="./css/mindmap.css">
+  <link rel="stylesheet" href="./css/redesign.css">
+  <link rel="stylesheet" href="./css/theme-picker.css">
+  <link rel="stylesheet" href="./css/themes.css">
 </head>
 <body>
+  <a class="skip-link" href="#workspace-title" data-i18n="skipContent">Skip to content</a>
   <div class="language-menu">
     <button id="language-toggle" class="language-toggle" type="button" aria-label="Language menu" aria-expanded="false" aria-controls="language-panel" data-i18n-label="menuLabel">
       <span aria-hidden="true">☰</span>
@@ -24,25 +30,48 @@
     <div class="language-backdrop" aria-hidden="true"></div>
     <div id="language-panel" class="language-panel" inert aria-hidden="true">
       <div class="info">
-        <h1 class="logo">NABNAK</h1>
+        <div class="logo">NABNAK</div>
         <p class="slogan"><span data-i18n="sloganFirst">a simple</span> <span data-i18n="sloganSecond">kanban board</span></p>
       </div>
+      <nav class="planner-nav" aria-label="Views" data-i18n-label="views">
+        <button id="open-tasks" type="button" data-view="tasks" aria-current="page" data-i18n="myTasks">My tasks</button>
+        <button id="open-calendar" type="button" data-view="calendar" data-i18n="calendar">Calendar</button>
+        <button id="open-goals" type="button" data-view="goals" data-i18n="goals">Goals</button>
+        <button id="open-mindmaps" type="button" data-view="mindmaps" data-i18n="mmMaps">Mind maps</button>
+      </nav>
+      <div class="sidebar-preferences">
       <fieldset>
         <legend><svg class="sidebar-section-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></svg><span data-i18n="language">Language</span></legend>
         <label><input type="radio" name="language" value="pt-BR"><span lang="pt-BR">Português (Brasil)</span></label>
         <label><input type="radio" name="language" value="en" checked><span lang="en">English</span></label>
         <label><input type="radio" name="language" value="es"><span lang="es">Español</span></label>
       </fieldset>
-      <nav class="planner-nav" aria-label="Views" data-i18n-label="views">
-        <button id="open-calendar" type="button" data-i18n="calendar">Calendar</button>
-        <button id="open-goals" type="button" data-i18n="goals">Goals</button>
-        <button id="open-mindmaps" type="button" data-i18n="mmMaps">Mind maps</button>
-      </nav>
+      <label class="theme-label" for="theme-select"><span data-i18n="appearance">Appearance</span>
+        <select id="theme-select"><option value="system" data-i18n="themeSystem">System</option><option value="light" data-i18n="themeLight">Light</option><option value="dark" data-i18n="themeDark">Dark</option></select>
+      </label>
+      <p id="theme-mode-hint" class="theme-mode-hint" data-i18n="themeModeManaged" hidden>The selected theme defines its light or dark appearance.</p>
+      <fieldset class="theme-options">
+        <legend data-i18n="visualTheme">Visual theme</legend>
+        <button id="skin-original" class="theme-option" type="button" data-skin-option="original" aria-pressed="true">
+          <span class="theme-preview preview-original" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span data-i18n="themeOriginal">Original</span>
+        </button>
+        <button id="skin-cafe" class="theme-option" type="button" data-skin-option="lofi-cafe" aria-pressed="false">
+          <span class="theme-preview preview-cafe" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span data-i18n="themeCafe">Lo-fi Café</span>
+        </button>
+        <button id="skin-midnight" class="theme-option" type="button" data-skin-option="lofi-midnight" aria-pressed="false">
+          <span class="theme-preview preview-midnight" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span data-i18n="themeMidnight">Lo-fi Midnight</span>
+        </button>
+      </fieldset>
+      <label class="theme-illustration-label"><input id="theme-illustrations" type="checkbox" disabled><span data-i18n="themeIllustrations">Small lo-fi illustrations</span></label>
+      </div>
     </div>
   </div>
   <main class="workspace" aria-labelledby="workspace-title">
   <header class="workspace-header">
-    <h1 id="workspace-title" data-i18n="myTasks">My tasks</h1>
+    <h1 id="workspace-title" tabindex="-1" data-i18n="myTasks">My tasks</h1>
     <p data-i18n="tasksSubtitle">Organize your day with ease.</p>
   </header>
   <section class="task" aria-labelledby="add-task-heading">
@@ -64,6 +93,16 @@
         </div>
       </form>
   </section>
+  <section class="task-filters" aria-label="Search tasks" data-i18n-label="searchTasks">
+    <label class="search-field" for="task-search"><span data-i18n="searchTasks">Search tasks</span><input id="task-search" type="search" placeholder="Search by task title…" data-i18n-placeholder="searchPlaceholder" autocomplete="off"></label>
+    <label for="filter-deadline"><span data-i18n="filterDeadline">Due date</span><select id="filter-deadline">
+      <option value="" data-i18n="allDeadlines">Any date</option><option value="overdue" data-i18n="overdue">Overdue</option><option value="dueToday" data-i18n="dueToday">Due today</option><option value="nextWeek" data-i18n="nextWeek">Next 7 days</option><option value="upcoming" data-i18n="upcoming">Upcoming</option><option value="noDate" data-i18n="noDateFilter">Without a date</option>
+    </select></label>
+    <label for="filter-goal"><span data-i18n="filterGoal">Goal</span><select id="filter-goal"></select></label>
+    <label for="filter-status"><span data-i18n="filterStatus">Status</span><select id="filter-status"><option value="" data-i18n="allStatuses">All statuses</option><option value="todo" data-i18n="todo">To do</option><option value="doing" data-i18n="doing">In progress</option><option value="done" data-i18n="done">Done</option></select></label>
+    <button id="clear-filters" type="button" data-i18n="clearFilters">Clear filters</button>
+    <p id="filter-results" role="status" aria-live="polite" aria-atomic="true"></p>
+  </section>
   <div class="boards">
     <!-- Quadro de tarefas para fazer -->
     <div class="board">
@@ -71,6 +110,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5h13M8 12h13M8 19h9"/><circle cx="3" cy="5" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="19" r="1"/></svg>
         <span data-i18n="todo">To do</span><span class="board-count" aria-label="Tasks: 0">0</span>
       </h2>
+      <form class="column-quick-add" data-quick-column="todo"><label class="sr-only" for="quick-todo" data-i18n="quickTask">Quick task</label><input id="quick-todo" name="title" required type="text" data-i18n-placeholder="quickTask" placeholder="Quick task" autocomplete="off"><button type="submit" data-i18n="addShort">Add</button></form>
       <div class="dropZone" id="todo">
         <!-- Cartões de tarefas -->
         <div class="card" draggable="true">
@@ -85,6 +125,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>
         <span data-i18n="doing">In progress</span><span class="board-count" aria-label="Tasks: 0">0</span>
       </h2>
+      <form class="column-quick-add" data-quick-column="doing"><label class="sr-only" for="quick-doing" data-i18n="quickTask">Quick task</label><input id="quick-doing" name="title" required type="text" data-i18n-placeholder="quickTask" placeholder="Quick task" autocomplete="off"><button type="submit" data-i18n="addShort">Add</button></form>
       <div class="dropZone" id="doing">
         <div class="card" draggable="true">
           <div class="status doing"></div>
@@ -99,6 +140,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8"/><path d="m8 12 3 3 5-6"/></svg>
         <span data-i18n="done">Done</span><span class="board-count" aria-label="Tasks: 0">0</span>
       </h2>
+      <form class="column-quick-add" data-quick-column="done"><label class="sr-only" for="quick-done" data-i18n="quickTask">Quick task</label><input id="quick-done" name="title" required type="text" data-i18n-placeholder="quickTask" placeholder="Quick task" autocomplete="off"><button type="submit" data-i18n="addShort">Add</button></form>
       <div class="dropZone" id="done">
         <div class="card" draggable="true">
           <div class="status done"></div>
@@ -109,29 +151,34 @@
     </div>
   </div>
   <p id="storage-warning" class="storage-warning" role="alert" hidden></p>
+  <p id="task-announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
   </main>
 
 
-  <section id="mindmap-view" class="mm-view" aria-labelledby="mm-heading" hidden>
+  <section id="mindmap-view" class="mm-view" role="main" aria-labelledby="mm-heading" hidden>
     <header class="mm-header">
       <button id="mm-back" type="button" data-i18n="mmBack">Back to tasks</button>
-      <h2 id="mm-heading" data-i18n="mmMaps">Mind maps</h2>
+      <h1 id="mm-heading" tabindex="-1" data-i18n="mmMaps">Mind maps</h1>
       <select id="mm-map-select" data-i18n-label="mmChoose" aria-label="Choose a map"></select>
       <input id="mm-map-name" type="text" maxlength="200" data-i18n-label="mmMapName" aria-label="Map name">
       <button id="mm-new" class="mm-primary" type="button" data-i18n="mmNew">New map</button>
+      <button id="mm-details-toggle" type="button" aria-expanded="true" aria-controls="mm-inspector" data-i18n="mapDetails">Idea details</button>
     </header>
     <div class="mm-body">
       <div id="mm-viewport" class="mm-viewport" tabindex="0" data-i18n-label="mmCanvas" aria-label="Mind map workspace">
         <div id="mm-world" class="mm-world"><svg id="mm-edges" class="mm-edges" aria-hidden="true"></svg><div id="mm-nodes"></div></div>
         <p id="mm-empty" class="mm-empty" data-i18n="mmEmpty">Create a map to begin.</p>
       </div>
-      <aside class="mm-inspector" aria-labelledby="mm-details-heading">
-        <h3 id="mm-details-heading" data-i18n="mmSelection">Idea details</h3>
+      <aside id="mm-inspector" class="mm-inspector" aria-labelledby="mm-details-heading">
+        <h2 id="mm-details-heading" data-i18n="mmSelection">Idea details</h2>
+        <label class="mm-shortcut-option"><input id="mm-edit-mode" type="checkbox" aria-describedby="mm-edit-hint"><span data-i18n="mapEditMode">Map editing shortcuts</span></label>
+        <p id="mm-edit-hint" data-i18n="mapEditHint">When enabled, Tab creates a subidea. Turn off to navigate with Tab.</p>
         <p id="mm-selection-hint" data-i18n="mmSelectHint">Select an idea to edit its details.</p>
         <div id="mm-node-fields" hidden>
           <label><span data-i18n="mmTitle">Idea title</span><textarea id="mm-title" rows="2"></textarea></label>
           <label><span data-i18n="mmDescription">Description (optional)</span><textarea id="mm-description" rows="3"></textarea></label>
           <label><span data-i18n="mmColor">Branch color</span><input id="mm-color" type="color" value="#fd951f"></label>
+          <fieldset class="mm-directions"><legend data-i18n="moveIdea">Move selected idea</legend><button id="mm-move-left" type="button" data-i18n-label="moveLeft" aria-label="Move left">←</button><button id="mm-move-up" type="button" data-i18n-label="moveUp" aria-label="Move up">↑</button><button id="mm-move-down" type="button" data-i18n-label="moveDown" aria-label="Move down">↓</button><button id="mm-move-right" type="button" data-i18n-label="moveRight" aria-label="Move right">→</button></fieldset>
           <div class="mm-node-actions">
             <button id="mm-collapse" type="button" data-i18n="mmCollapse">Collapse / expand branch</button>
             <button id="mm-duplicate" type="button" data-i18n="mmDuplicate">Duplicate idea</button>
@@ -144,12 +191,13 @@
       </aside>
     </div>
     <div id="mm-toolbar" class="mm-toolbar" role="toolbar" data-i18n-label="mmMaps" aria-label="Mind maps"></div>
+    <div class="mm-pan-controls" role="group" data-i18n-label="mapNavigate" aria-label="Navigate map"><button id="mm-pan-left" type="button" data-i18n-label="panLeft" aria-label="Pan left">←</button><button id="mm-pan-up" type="button" data-i18n-label="panUp" aria-label="Pan up">↑</button><button id="mm-pan-down" type="button" data-i18n-label="panDown" aria-label="Pan down">↓</button><button id="mm-pan-right" type="button" data-i18n-label="panRight" aria-label="Pan right">→</button></div>
     <footer class="mm-footer"><p id="mm-help" data-i18n="mmHelp"></p><p id="mm-message" role="status" aria-live="polite"></p></footer>
     <div id="mm-measure" class="mm-measure" aria-hidden="true"></div>
   </section>
 
-  <dialog id="calendar-dialog" class="planner-dialog" aria-labelledby="calendar-title">
-    <header class="planner-header"><h2 id="calendar-title" data-i18n="calendar">Calendar</h2><button type="button" data-close-dialog data-i18n-label="close" aria-label="Close">×</button></header>
+  <section id="calendar-dialog" class="planner-dialog planner-view" role="main" aria-labelledby="calendar-title" hidden>
+    <header class="planner-header"><div><h1 id="calendar-title" tabindex="-1" data-i18n="calendar">Calendar</h1><p data-i18n="calendarSubtitle">Plan your tasks by date.</p></div><button type="button" data-back-tasks data-i18n="backTasks">Back to tasks</button></header>
     <div class="calendar-toolbar">
       <button id="previous-year" type="button" data-i18n-label="previousYear" aria-label="Previous year">«</button>
       <button id="previous-month" type="button" data-i18n-label="previousMonth" aria-label="Previous month">‹</button>
@@ -158,12 +206,12 @@
       <button id="next-year" type="button" data-i18n-label="nextYear" aria-label="Next year">»</button>
       <button id="calendar-today" type="button" data-i18n="today">Today</button>
     </div>
-    <h3 id="calendar-heading" class="calendar-heading" aria-live="polite"></h3>
+    <h2 id="calendar-heading" class="calendar-heading" aria-live="polite"></h2>
     <div class="calendar-layout">
       <section class="calendar-month-view" aria-labelledby="calendar-heading"><div id="calendar-week" class="calendar-week" aria-hidden="true"></div><div id="calendar-days" class="calendar-days"></div><div id="calendar-legend" class="calendar-legend"></div></section>
-      <section class="calendar-agenda" aria-labelledby="selected-date"><h3 id="selected-date"></h3><p data-i18n="tasksForDay">Tasks for this day</p><div id="calendar-tasks"></div><button id="calendar-new-task" class="primary" type="button" data-i18n="newTask">New task</button></section>
+      <section class="calendar-agenda" aria-labelledby="selected-date"><h2 id="selected-date"></h2><p data-i18n="tasksForDay">Tasks for this day</p><div id="calendar-tasks"></div><button id="calendar-new-task" class="primary" type="button" data-i18n="newTask">New task</button></section>
     </div>
-  </dialog>
+  </section>
   <dialog id="task-dialog" class="planner-dialog editor-dialog" aria-labelledby="task-editor-heading">
     <header class="planner-header"><h2 id="task-editor-heading"></h2><button type="button" data-close-dialog data-i18n-label="close" aria-label="Close">×</button></header>
     <form id="task-editor-form" class="planner-form">
@@ -177,11 +225,11 @@
     </form>
   </dialog>
 
-  <dialog id="goals-dialog" class="planner-dialog" aria-labelledby="goals-title">
-    <header class="planner-header"><h2 id="goals-title" data-i18n="goals">Goals</h2><button type="button" data-close-dialog data-i18n-label="close" aria-label="Close">×</button></header>
+  <section id="goals-dialog" class="planner-dialog planner-view" role="main" aria-labelledby="goals-title" hidden>
+    <header class="planner-header"><div><h1 id="goals-title" tabindex="-1" data-i18n="goals">Goals</h1><p data-i18n="goalsSubtitle">Turn your plans into steady progress.</p></div><button type="button" data-back-tasks data-i18n="backTasks">Back to tasks</button></header>
     <button id="new-goal" class="primary" type="button" data-i18n="newGoal">New goal</button>
     <div id="goals-list" class="goals-list"></div>
-  </dialog>
+  </section>
   <dialog id="goal-dialog" class="planner-dialog editor-dialog" aria-labelledby="goal-editor-heading">
     <header class="planner-header"><h2 id="goal-editor-heading"></h2><button type="button" data-close-dialog data-i18n-label="close" aria-label="Close">×</button></header>
     <form id="goal-editor-form" class="planner-form">
@@ -197,11 +245,14 @@
   <script src="./js/store.js" defer></script>
   <script src="./js/planner-translations.js" defer></script>
   <script src="./js/mindmap-translations.js" defer></script>
+  <script src="./js/redesign-translations.js" defer></script>
   <script src="./js/i18n.js" defer></script>
+  <script src="./js/task-filters.js" defer></script>
   <script src="./js/script.js" defer></script>
   <script src="./js/task-form.js" defer></script>
   <script src="./js/planner.js" defer></script>
   <script src="./js/mindmap-data.js" defer></script>
   <script src="./js/mindmap.js" defer></script>
+  <script src="./js/shell.js" defer></script>
 </body>
 </html>

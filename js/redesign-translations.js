@@ -1,0 +1,65 @@
+(() => {
+  const messages = {
+    en: {
+      visualTheme: 'Visual theme', themeOriginal: 'Original', themeCafe: 'Lo-fi Café', themeMidnight: 'Lo-fi Midnight',
+      themeModeManaged: 'This lo-fi theme defines its light or dark appearance. Original restores your previous setting.',
+      themeIllustrations: 'Small lo-fi illustrations', sceneIllustrations: 'Atmospheric illustrations',
+      menuLabel: 'Toggle navigation', appearance: 'Appearance', themeLight: 'Light', themeDark: 'Dark', themeSystem: 'System',
+      skipContent: 'Skip to content', searchTasks: 'Search tasks', searchPlaceholder: 'Search by task title…',
+      filterDeadline: 'Due date', filterGoal: 'Goal', filterStatus: 'Status', allDeadlines: 'Any date', allGoals: 'All goals', allStatuses: 'All statuses',
+      noGoalFilter: 'Without a goal', noDateFilter: 'Without a date', nextWeek: 'Next 7 days', clearFilters: 'Clear filters',
+      results: 'Tasks shown', emptyColumn: 'No tasks in this column.', noMatches: 'No matching tasks.', quickTask: 'Quick task',
+      moveTask: 'Move task to', taskCreated: 'Task added.', taskMoved: 'Task moved.', taskRemoved: 'Task deleted.',
+      calendarSubtitle: 'Plan your tasks by date.', goalsSubtitle: 'Turn your plans into steady progress.',
+      backTasks: 'Back to tasks', mapDetails: 'Idea details', mapEditMode: 'Map editing shortcuts',
+      mapEditHint: 'When enabled, Tab creates a subidea. Turn off to navigate with Tab.',
+      moveIdea: 'Move selected idea', moveLeft: 'Move left', moveRight: 'Move right', moveUp: 'Move up', moveDown: 'Move down',
+      panLeft: 'Pan left', panRight: 'Pan right', panUp: 'Pan up', panDown: 'Pan down',
+      mapHelp: 'Drag to navigate · Wheel or pinch to zoom · Use the toolbar for keyboard and touch alternatives.',
+      mapNavigate: 'Navigate map', mapCreate: 'Create and organize', mapHistory: 'History', mapView: 'View', mapFiles: 'Files',
+      noTasksPeriod: 'No tasks for this date.',
+      mmHelp: 'Drag to navigate · Wheel or pinch to zoom · Delete: remove · Ctrl/Cmd+Z: undo · Optional editing shortcuts: Tab adds a subidea'
+    },
+    'pt-BR': {
+      visualTheme: 'Tema visual', themeOriginal: 'Original', themeCafe: 'Lo-fi Café', themeMidnight: 'Lo-fi Midnight',
+      themeModeManaged: 'Este tema lo-fi define o modo claro ou escuro. Original restaura sua configuração anterior.',
+      themeIllustrations: 'Pequenas ilustrações lo-fi', sceneIllustrations: 'Ilustrações de ambiente',
+      menuLabel: 'Abrir ou recolher navegação', appearance: 'Aparência', themeLight: 'Claro', themeDark: 'Escuro', themeSystem: 'Sistema',
+      skipContent: 'Ir para o conteúdo', searchTasks: 'Pesquisar tarefas', searchPlaceholder: 'Pesquisar pelo título da tarefa…',
+      filterDeadline: 'Prazo', filterGoal: 'Meta', filterStatus: 'Situação', allDeadlines: 'Qualquer prazo', allGoals: 'Todas as metas', allStatuses: 'Todas as situações',
+      noGoalFilter: 'Sem meta', noDateFilter: 'Sem prazo', nextWeek: 'Próximos 7 dias', clearFilters: 'Limpar filtros',
+      results: 'Tarefas exibidas', emptyColumn: 'Nenhuma tarefa nesta coluna.', noMatches: 'Nenhuma tarefa corresponde aos filtros.', quickTask: 'Tarefa rápida',
+      moveTask: 'Mover tarefa para', taskCreated: 'Tarefa adicionada.', taskMoved: 'Tarefa movida.', taskRemoved: 'Tarefa excluída.',
+      calendarSubtitle: 'Planeje suas tarefas por data.', goalsSubtitle: 'Transforme seus planos em progresso constante.',
+      backTasks: 'Voltar às tarefas', mapDetails: 'Detalhes da ideia', mapEditMode: 'Atalhos de edição do mapa',
+      mapEditHint: 'Quando ativados, Tab cria uma subideia. Desative para navegar com Tab.',
+      moveIdea: 'Mover ideia selecionada', moveLeft: 'Mover para a esquerda', moveRight: 'Mover para a direita', moveUp: 'Mover para cima', moveDown: 'Mover para baixo',
+      panLeft: 'Navegar à esquerda', panRight: 'Navegar à direita', panUp: 'Navegar para cima', panDown: 'Navegar para baixo',
+      mapHelp: 'Arraste para navegar · Roda do mouse ou pinça para zoom · A barra oferece alternativas por teclado e toque.',
+      mapNavigate: 'Navegar pelo mapa', mapCreate: 'Criar e organizar', mapHistory: 'Histórico', mapView: 'Visualização', mapFiles: 'Arquivos',
+      noTasksPeriod: 'Nenhuma tarefa nesta data.',
+      mmHelp: 'Arraste para navegar · Roda ou pinça para zoom · Delete: excluir · Ctrl/Cmd+Z: desfazer · Atalhos de edição opcionais: Tab adiciona subideia'
+    },
+    es: {
+      visualTheme: 'Tema visual', themeOriginal: 'Original', themeCafe: 'Lo-fi Café', themeMidnight: 'Lo-fi Midnight',
+      themeModeManaged: 'Este tema lo-fi define el modo claro u oscuro. Original restaura tu configuración anterior.',
+      themeIllustrations: 'Pequeñas ilustraciones lo-fi', sceneIllustrations: 'Ilustraciones ambientales',
+      menuLabel: 'Abrir o contraer navegación', appearance: 'Apariencia', themeLight: 'Claro', themeDark: 'Oscuro', themeSystem: 'Sistema',
+      skipContent: 'Ir al contenido', searchTasks: 'Buscar tareas', searchPlaceholder: 'Buscar por título de la tarea…',
+      filterDeadline: 'Plazo', filterGoal: 'Meta', filterStatus: 'Estado', allDeadlines: 'Cualquier plazo', allGoals: 'Todas las metas', allStatuses: 'Todos los estados',
+      noGoalFilter: 'Sin meta', noDateFilter: 'Sin fecha', nextWeek: 'Próximos 7 días', clearFilters: 'Borrar filtros',
+      results: 'Tareas mostradas', emptyColumn: 'No hay tareas en esta columna.', noMatches: 'No hay tareas que coincidan.', quickTask: 'Tarea rápida',
+      moveTask: 'Mover tarea a', taskCreated: 'Tarea añadida.', taskMoved: 'Tarea movida.', taskRemoved: 'Tarea eliminada.',
+      calendarSubtitle: 'Planifica tus tareas por fecha.', goalsSubtitle: 'Convierte tus planes en progreso constante.',
+      backTasks: 'Volver a las tareas', mapDetails: 'Detalles de la idea', mapEditMode: 'Atajos de edición del mapa',
+      mapEditHint: 'Al activarlos, Tab crea una subidea. Desactívalos para navegar con Tab.',
+      moveIdea: 'Mover idea seleccionada', moveLeft: 'Mover a la izquierda', moveRight: 'Mover a la derecha', moveUp: 'Mover hacia arriba', moveDown: 'Mover hacia abajo',
+      panLeft: 'Desplazar a la izquierda', panRight: 'Desplazar a la derecha', panUp: 'Desplazar hacia arriba', panDown: 'Desplazar hacia abajo',
+      mapHelp: 'Arrastra para navegar · Rueda o pellizco para zoom · La barra ofrece alternativas con teclado y tacto.',
+      mapNavigate: 'Navegar por el mapa', mapCreate: 'Crear y organizar', mapHistory: 'Historial', mapView: 'Vista', mapFiles: 'Archivos',
+      noTasksPeriod: 'No hay tareas para esta fecha.',
+      mmHelp: 'Arrastra para navegar · Rueda o pellizco para zoom · Delete: eliminar · Ctrl/Cmd+Z: deshacer · Atajos opcionales: Tab añade una subidea'
+    }
+  };
+  for (const [language, dictionary] of Object.entries(messages)) Object.assign(window.NabnakMessages[language], dictionary);
+})();

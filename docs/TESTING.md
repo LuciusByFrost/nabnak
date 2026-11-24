@@ -1,5 +1,11 @@
 # Calendário e metas
 
+> O redesign passou a apresentar calendário, metas e mapas como vistas principais.
+> Consulte [REDESIGN.md](REDESIGN.md) para os 96 testes atuais, a execução
+> progressiva, temas, filtros e instruções de validação Playwright. A conferência
+> visual permanece pendente por bloqueio do ambiente. As instruções históricas
+> abaixo descrevem a implementação anterior com diálogos e hover nos cartões.
+
 O projeto continua sendo HTML/CSS/JavaScript estático, sem backend ou dependências.
 Abra `index.html`. O idioma continua em `nabnak.language`; tarefas e metas ficam
 em `nabnak.data`. A versão 2 migra registros da versão 1 sem recriar os exemplos.

@@ -4,7 +4,7 @@ const {boot} = require('./dom-harness.cjs');
 test('calendar UI creates, edits, reschedules and deletes tasks without duplication on reload', () => {
   let app = boot(); let {$, context} = app;
   const initial = context.NabnakStore.getState().tasks.length;
-  $('open-calendar').click(); assert.equal($('calendar-dialog').open, true);
+  $('open-calendar').click(); assert.equal($('calendar-dialog').hidden, false);
   $('calendar-month').value = '2024-02'; $('calendar-month').fire('change');
   assert.equal($('calendar-days').querySelectorAll('button').length, 29);
   $('calendar-days').querySelector('[data-date="2024-02-29"]').click();
@@ -42,9 +42,9 @@ test('calendar navigation, translated controls, user content and sidebar states'
     assert.equal($('open-calendar').textContent, context.NabnakI18n.t('calendar'));
     const card = document.querySelector(`[data-task-id="${task.id}"]`);
     assert.equal(card.querySelector('.content').textContent, task.title);
-    assert.equal($('calendar-dialog').querySelector('[data-i18n-label="close"]').getAttribute('aria-label'), context.NabnakI18n.t('close'));
+    assert.equal($('calendar-dialog').querySelector('[data-back-tasks]').textContent, context.NabnakI18n.t('backTasks'));
   }
-  $('calendar-dialog').querySelector('[data-close-dialog]').click(); assert.equal($('calendar-dialog').open, false);
+  $('calendar-dialog').querySelector('[data-back-tasks]').click(); assert.equal($('calendar-dialog').hidden, true);
 });
 test('board form, drag/drop handlers, date retention, completed badges and card deletion', () => {
   const {$, context, document} = boot();
@@ -72,7 +72,7 @@ test('goals UI creates and edits goals, associates existing and new tasks and co
   $('edit-goal-description').value = 'User description'; $('edit-goal-date').value = '2026-12-01'; $('edit-goal-target').value = '2';
   $('goal-editor-form').fire('submit'); assert.equal($('goal-dialog').open, false);
   let goal = context.NabnakStore.getState().goals[0];
-  let card = $('goals-list').querySelector('.goal-card'); assert.equal(card.querySelector('h3').textContent, goal.title);
+  let card = $('goals-list').querySelector('.goal-card'); assert.equal(card.querySelector('h2').textContent, goal.title);
   let associate = card.querySelector('.associate-form'); associate.querySelector('select').value = existing.id; associate.fire('submit');
   assert.equal(context.NabnakStore.getState().tasks.find(task => task.id === existing.id).goalId, goal.id);
   card = $('goals-list').querySelector('.goal-card');
@@ -84,7 +84,7 @@ test('goals UI creates and edits goals, associates existing and new tasks and co
   card = $('goals-list').querySelector('.goal-card'); assert.equal(card.querySelector('progress').value, 100); assert.ok(card.classList.contains('goal-completed'));
   card.querySelector('.planner-actions').querySelectorAll('button')[0].click();
   $('edit-goal-title').value = 'Edited goal'; $('edit-goal-target').value = '4'; $('goal-editor-form').fire('submit');
-  card = $('goals-list').querySelector('.goal-card'); assert.equal(card.querySelector('h3').textContent, 'Edited goal'); assert.equal(card.querySelector('progress').value, 50);
+  card = $('goals-list').querySelector('.goal-card'); assert.equal(card.querySelector('h2').textContent, 'Edited goal'); assert.equal(card.querySelector('progress').value, 50);
   const reloaded = boot(app.data); assert.equal(reloaded.context.NabnakStore.getState().goals[0].title, 'Edited goal');
   card.querySelector('.planner-actions').querySelectorAll('button')[0].click();
   context.confirm = () => false; $('delete-goal').click(); assert.equal(context.NabnakStore.getState().goals.length, 1);
@@ -102,7 +102,7 @@ test('goal/task unlinking, translated goals UI, user text and editor cancel', ()
     document.querySelector(`input[value="${lang}"]`).click();
     assert.equal($('open-goals').textContent, context.NabnakI18n.t('goals'));
     const card = $('goals-list').querySelector('.goal-card');
-    assert.equal(card.querySelector('h3').textContent, goal.title); assert.equal(card.querySelector('.goal-description').textContent, goal.description);
+    assert.equal(card.querySelector('h2').textContent, goal.title); assert.equal(card.querySelector('.goal-description').textContent, goal.description);
   }
   const card = $('goals-list').querySelector('.goal-card');
   const unlink = card.querySelector('.planner-task').querySelectorAll('button')[1]; unlink.click();
@@ -120,7 +120,7 @@ test('calendar-created tasks link to goals, complete through the editor, and rel
   const content = document.querySelector(`[data-task-id="${task.id}"]`).querySelector('.content');
   assert.equal(content.textContent, task.title); assert.equal(content.querySelector('img'), null);
   context.NabnakPlanner.editTask(task.id); $('edit-task-status').value = 'done'; $('task-editor-form').fire('submit');
-  $('calendar-dialog').close(); $('open-goals').click();
+  context.NabnakShell.tasks(); $('open-goals').click();
   assert.equal($('goals-list').querySelector('progress').value, 100);
   const next = boot(app.data);
   assert.equal(next.document.documentElement.lang, 'pt-BR');
@@ -134,7 +134,7 @@ test('invalid editor input reports translated errors without changing tasks or g
   $('edit-task-title').value = 'Invalid date'; $('edit-task-date').value = '2026-02-30';
   const before = context.NabnakStore.getState().tasks.length; $('task-editor-form').fire('submit');
   assert.equal(context.NabnakStore.getState().tasks.length, before); assert.equal($('task-error').textContent, context.NabnakI18n.t('invalidDate'));
-  $('task-dialog').close(); $('calendar-dialog').close(); $('open-goals').click(); $('new-goal').click();
+  $('task-dialog').close(); context.NabnakShell.tasks(); $('open-goals').click(); $('new-goal').click();
   $('edit-goal-title').value = 'Invalid target'; $('edit-goal-date').value = '2027-01-01'; $('edit-goal-target').value = '0'; $('goal-editor-form').fire('submit');
   assert.equal(context.NabnakStore.getState().goals.length, 0); assert.equal($('goal-error').textContent, context.NabnakI18n.t('invalidTarget'));
 });
@@ -187,23 +187,24 @@ test('card deletion updates calendar and goal progress and deleting the last car
   const goal = context.NabnakStore.addGoal({title: 'Deletion progress', dueDate: '2020-01-01', target: 1});
   const date = context.NabnakData.localDay();
   const task = context.NabnakStore.addTask({title: 'Completed linked task', dueDate: date, goalId: goal.id, status: 'done'});
-  $('open-goals').click(); assert.equal($('goals-list').querySelector('progress').value, 100); $('goals-dialog').close();
+  $('open-goals').click(); assert.equal($('goals-list').querySelector('progress').value, 100); context.NabnakShell.tasks();
   document.querySelector(`[data-task-id="${task.id}"]`).querySelector('.card-delete').click();
-  $('open-calendar').click(); assert.equal($('calendar-tasks').querySelectorAll('.planner-task').length, 0); $('calendar-dialog').close();
+  $('open-calendar').click(); assert.equal($('calendar-tasks').querySelectorAll('.planner-task').length, 0); context.NabnakShell.tasks();
   $('open-goals').click(); assert.equal($('goals-list').querySelector('progress').value, 0);
-  assert.ok($('goals-list').querySelector('.goal-overdue')); $('goals-dialog').close();
+  assert.ok($('goals-list').querySelector('.goal-overdue')); context.NabnakShell.tasks();
   for (const remaining of context.NabnakStore.getState().tasks) document.querySelector(`[data-task-id="${remaining.id}"]`).querySelector('.card-delete').click();
   assert.equal(document.activeElement, $('task')); assert.equal(context.NabnakStore.getState().tasks.length, 0);
 });
-test('both card actions share hover/focus fade, mobile targets and reduced-motion styles', () => {
-  const fs = require('node:fs'), path = require('node:path');
-  const css = fs.readFileSync(path.join(__dirname, '../css/planner.css'), 'utf8');
-  assert.match(css, /\.card-action\s*\{[^}]*opacity: 0; pointer-events: none;/);
-  assert.match(css, /transition: opacity 180ms ease/);
-  assert.match(css, /\.card:hover \.card-action, \.card:focus-within \.card-action\s*\{\s*opacity: 1; pointer-events: auto;/);
-  assert.match(css, /@media \(hover: none\), \(pointer: coarse\), \(max-width: 600px\)\s*\{\s*\.card-action\s*\{ opacity: 1; pointer-events: auto; width: 44px; height: 44px;/);
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.card-action\s*\{ transition: none;/);
-  assert.match(css, /\.card-delete\s*\{ color: #ce8a8a;/);
+test('card action names identify the task and remain translated without changing user text', () => {
+  const {document, context} = boot();
+  const task = context.NabnakStore.addTask({title: 'Exact user title'});
+  for (const language of ['pt-BR', 'en', 'es']) {
+    document.querySelector(`input[value="${language}"]`).click();
+    const card = document.querySelector(`[data-task-id="${task.id}"]`);
+    assert.equal(card.querySelector('.card-edit').getAttribute('aria-label'), `${context.NabnakI18n.t('editTask')}: ${task.title}`);
+    assert.equal(card.querySelector('.card-delete').getAttribute('aria-label'), `${context.NabnakI18n.t('delete')}: ${task.title}`);
+    assert.equal(card.querySelector('select').getAttribute('aria-label'), `${context.NabnakI18n.t('moveTask')}: ${task.title}`);
+  }
 });
 for (const language of ['en', 'pt-BR', 'es']) {
   test(`top form and pencil: create, edit, move, reload and delete a dated goal task in ${language}`, () => {
@@ -239,15 +240,15 @@ for (const language of ['en', 'pt-BR', 'es']) {
     $('open-calendar').click(); $('calendar-month').value = '2027-01'; $('calendar-month').fire('change');
     $('calendar-days').querySelector('[data-date="2027-01-21"]').click();
     assert.equal($('calendar-tasks').querySelectorAll('.planner-task').length, 1);
-    assert.ok($('calendar-tasks').querySelector('.completed')); $('calendar-dialog').close();
-    $('open-goals').click(); assert.equal($('goals-list').querySelector('progress').value, 100); $('goals-dialog').close();
+    assert.ok($('calendar-tasks').querySelector('.completed')); context.NabnakShell.tasks();
+    $('open-goals').click(); assert.equal($('goals-list').querySelector('progress').value, 100); context.NabnakShell.tasks();
     let prompts = 0; context.confirm = message => { prompts++; assert.equal(message, context.NabnakI18n.t('deleteTaskConfirm')); return false; };
     document.querySelector(`[data-task-id="${taskId}"]`).querySelector('.card-delete').click(); assert.equal(prompts, 1);
     assert.ok(store.getState().tasks.some(task => task.id === taskId));
     context.confirm = () => true; document.querySelector(`[data-task-id="${taskId}"]`).querySelector('.card-delete').click();
     assert.deepEqual(Array.from(store.getState().tasks, task => task.id), originalIds);
-    $('open-calendar').click(); assert.equal($('calendar-tasks').querySelectorAll('.planner-task').length, 0); $('calendar-dialog').close();
-    $('open-goals').click(); assert.equal($('goals-list').querySelector('progress').value, 0); $('goals-dialog').close();
+    $('open-calendar').click(); assert.equal($('calendar-tasks').querySelectorAll('.planner-task').length, 0); context.NabnakShell.tasks();
+    $('open-goals').click(); assert.equal($('goals-list').querySelector('progress').value, 0); context.NabnakShell.tasks();
     const reloaded = boot(app.data);
     assert.equal(reloaded.document.documentElement.lang, language);
     assert.deepEqual(Array.from(reloaded.context.NabnakStore.getState().tasks, task => task.id), originalIds);
@@ -364,14 +365,14 @@ test('reference badges show only existing metadata, localize dates and keep save
   assert.equal(reloaded.tasks.find(task => task.id === all.id).dueDate, '2027-01-20');
 });
 
-test('layout CSS shares a bounded workspace and uses content-sized responsive columns', () => {
-  const fs = require('node:fs'), path = require('node:path');
-  const css = fs.readFileSync(path.join(__dirname, '../css/style.css'), 'utf8');
-  assert.match(css, /\.workspace\{[^}]*width: 100%;[^}]*max-width: 1440px;/);
-  assert.doesNotMatch(css, /\.boards\{[^}]*(?:flex: 1|height: 100)/);
-  assert.match(css, /\.boards\{[^}]*align-items: stretch;/);
-  assert.match(css, /\.boards\{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
-  assert.match(css, /@media \(max-width: 700px\)\{[^]*padding: 64px 16px 24px;[^]*grid-template-columns: minmax\(0, 1fr\);/);
-  assert.doesNotMatch(css, /\.footer\{|\.garbage\{/);
-  for (const [status, color] of [['todo', '#ee4053'], ['doing', '#e0cb3d'], ['done', '#55b96a']]) assert.match(css, new RegExp('\\.' + status + '\\{\\s*background-color: ' + color + ';'));
+test('switching themes and main views preserves task IDs, metadata and goal links', () => {
+  const app = boot(); const {$, context} = app;
+  const goal = context.NabnakStore.addGoal({title: 'Unchanged goal', dueDate: '2099-01-01', target: 1});
+  context.NabnakStore.addTask({title: 'Unchanged task', goalId: goal.id, dueDate: '2027-01-01'});
+  const original = app.data.get('nabnak.data');
+  for (const theme of ['light', 'dark', 'system']) {
+    $('theme-select').value = theme; $('theme-select').fire('change');
+    for (const view of ['calendar', 'goals', 'mindmaps', 'tasks']) $('open-' + view).click();
+  }
+  assert.equal(app.data.get('nabnak.data'), original);
 });

@@ -134,6 +134,7 @@
     $('mm-collapse').disabled = !current || !map.nodes.some(item => item.parentId === current.id);
     $('mm-collapse').setAttribute('aria-pressed', String(Boolean(current?.collapsed)));
     for (const id of ['mm-child', 'mm-duplicate', 'mm-task']) $(id).disabled = !current || store.isReadOnly();
+    for (const direction of ['left', 'right', 'up', 'down']) $('mm-move-' + direction).disabled = !current || store.isReadOnly();
     for (const id of ['mm-add', 'mm-connect', 'mm-organize', 'mm-center', 'mm-fit']) $(id).disabled = !map || store.isReadOnly();
     $('mm-undo').disabled = !store.canUndo(); $('mm-redo').disabled = !store.canRedo();
     $('mm-connect').setAttribute('aria-pressed', String(connecting)); viewport.classList.toggle('is-connecting', connecting);
@@ -181,12 +182,12 @@
     selectedId = map.rootId; render(); fit(); focusSelected();
   }
   function open() {
-    NabnakI18n.closeMenu(); view.hidden = false; document.querySelector('.workspace').hidden = true;
+    NabnakShell.show('mindmaps', false);
     if (!mapNow() && !store.isReadOnly()) createMap();
     else { render(); viewport.focus(); }
   }
   function close() {
-    saveCamera(); view.hidden = true; document.querySelector('.workspace').hidden = false; connecting = false; connectSource = null; $('task').focus();
+    NabnakShell.tasks(); connecting = false; connectSource = null;
   }
   function updateNode(patch) {
     const node = nodeNow(); if (!node) return;
@@ -264,6 +265,16 @@
   }
   function toolbar() {
     const bar = $('mm-toolbar');
+    const groups = {};
+    for (const key of ['mapCreate', 'mapHistory', 'mapView', 'mapFiles']) {
+      const group = make('div', 'mm-tool-group'); group.setAttribute('role', 'group');
+      group.setAttribute('data-i18n-label', key); group.setAttribute('aria-label', t(key));
+      if (key === 'mapFiles') {
+        const files = make('details', 'mm-file-menu'), summary = make('summary', '', t(key));
+        summary.setAttribute('data-i18n', key); files.append(summary, group); bar.append(files);
+      } else bar.append(group);
+      groups[key] = group;
+    }
     for (const [id, icon, key, action] of [
       ['add', 'add', 'mmAdd', () => add()], ['child', 'child', 'mmChild', () => add(true)],
       ['connect', 'connect', 'mmConnect', () => { connecting = !connecting; connectSource = selectedId; message = ''; render(); }],
@@ -275,18 +286,19 @@
       const button = make('button'); button.id = 'mm-' + id; button.type = 'button';
       button.setAttribute('data-i18n-label', key); button.setAttribute('data-i18n-title', key); button.setAttribute('aria-label', t(key)); button.setAttribute('title', t(key));
       const svg = svgElement('svg', {viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false'}); svg.append(svgElement('path', {d: icons[icon]})); button.append(svg);
-      button.addEventListener('click', action); bar.append(button);
-      if (id === 'zoom-out') { const output = make('output'); output.id = 'mm-zoom-value'; output.textContent = '100%'; bar.append(output); }
+      const group = groups[['export', 'import'].includes(id) ? 'mapFiles' : ['undo', 'redo'].includes(id) ? 'mapHistory' : ['zoom-out', 'zoom-in', 'center', 'fit'].includes(id) ? 'mapView' : 'mapCreate'];
+      button.addEventListener('click', action); group.append(button);
+      if (id === 'zoom-out') { const output = make('output'); output.id = 'mm-zoom-value'; output.textContent = '100%'; group.append(output); }
     }
     const format = make('select'); format.id = 'mm-export-format'; format.setAttribute('data-i18n-label', 'mmFormat'); format.setAttribute('aria-label', t('mmFormat'));
-    for (const type of ['json', 'svg']) { const option = make('option', '', type.toUpperCase()); option.value = type; format.append(option); } bar.append(format);
+    for (const type of ['json', 'svg']) { const option = make('option', '', type.toUpperCase()); option.value = type; format.append(option); } groups.mapFiles.append(format);
   }
   // Pointer capture keeps node dragging separate from background panning, including touch.
   const point = event => { const rect = viewport.getBoundingClientRect(); return {x: event.clientX - rect.left, y: event.clientY - rect.top}; };
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const midpoint = (a, b) => ({x: (a.x + b.x) / 2, y: (a.y + b.y) / 2});
   viewport.addEventListener('pointerdown', event => {
-    if (event.button !== undefined && event.button !== 0 || event.target.closest('[contenteditable="true"]')) return;
+    if (event.button !== undefined && event.button !== 0 || event.target.closest('button, input, select, [contenteditable="true"]')) return;
     const p = point(event); pointers.set(event.pointerId, p); viewport.setPointerCapture?.(event.pointerId);
     if (pointers.size === 2) {
       const [a, b] = [...pointers.values()]; gesture = {type: 'pinch', distance: distance(a, b), midpoint: midpoint(a, b), camera: {...camera}}; return;
@@ -339,10 +351,10 @@
       if (event.key === 'Escape') { gesture = null; pointers.clear(); viewport.classList.remove('is-dragging'); render(); }
       return;
     }
-    if (event.key === 'Escape') { connecting = false; connectSource = null; message = ''; render(); }
+    if (event.key === 'Escape') { connecting = false; connectSource = null; $('mm-edit-mode').checked = false; message = ''; render(); }
     else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) store.redo(); else store.undo(); }
     else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') { event.preventDefault(); store.redo(); }
-    else if (event.key === 'Tab' && !connecting && !event.shiftKey && selectedId && (target.closest('.mm-node') || target === viewport)) { event.preventDefault(); add(true); }
+    else if (event.key === 'Tab' && $('mm-edit-mode').checked && !connecting && !event.shiftKey && selectedId && (target.closest('.mm-node') || target === viewport)) { event.preventDefault(); add(true); }
     else if (['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(event.key) && target.closest('.mm-node')) {
       const nodes = D.visibleNodes(mapNow()), index = nodes.findIndex(node => node.id === selectedId);
       const step = ['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1;
@@ -374,13 +386,42 @@
     render({preserveNodes: kind === 'view'});
   });
   // A refresh/close must also flush a still-focused field, not just camera changes.
-  window.addEventListener?.('pagehide', () => {
+  function suspend() {
     if (view.hidden || store.isReadOnly()) return;
-    const active = document.activeElement;
-    if (['mm-title', 'mm-description', 'mm-map-name'].includes(active?.id)) active.dispatchEvent(new Event('change'));
-    else if (active?.getAttribute('contenteditable') === 'true') active.blur();
+    const inline = view.querySelector('[contenteditable="true"]');
+    if (inline) inline.blur();
+    const node = nodeNow(), map = mapNow();
+    const title = $('mm-title').value.trim();
+    const description = $('mm-description').value;
+    const color = D.color($('mm-color').value);
+    const mapTitle = $('mm-map-name').value.trim();
+    if (map && ((mapTitle && mapTitle !== map.title) || (node && ((title && title !== node.title) || description !== node.description || color !== node.color)))) {
+      editMap(current => {
+        if (mapTitle) current.title = mapTitle;
+        const selected = current.nodes.find(item => item.id === selectedId);
+        if (selected) { if (title) selected.title = title; selected.description = description; selected.color = color; arrange(current); }
+      });
+    }
     saveCamera();
-  });
+  }
+  window.addEventListener?.('pagehide', suspend);
+  const inspector = $('mm-inspector'), detailToggle = $('mm-details-toggle');
+  function details(open) {
+    inspector.hidden = !open; view.classList.toggle('details-hidden', !open);
+    detailToggle.setAttribute('aria-expanded', String(open));
+  }
+  details(Boolean(window.matchMedia?.('(min-width: 801px)').matches));
+  detailToggle.addEventListener('click', () => details(inspector.hidden));
+  for (const [direction, dx, dy] of [['left', -32, 0], ['right', 32, 0], ['up', 0, -32], ['down', 0, 32]]) {
+    $('mm-move-' + direction).addEventListener('click', () => {
+      if (!nodeNow() || store.isReadOnly()) return;
+      editMap(map => { const node = map.nodes.find(item => item.id === selectedId); node.x += dx; node.y += dy; node.manual = true; });
+    });
+    $('mm-pan-' + direction).addEventListener('click', () => {
+      if (!mapNow()) return;
+      camera.x -= dx * 3; camera.y -= dy * 3; applyCamera(); saveCamera();
+    });
+  }
   toolbar(); render();
-  window.NabnakMindmaps = {open, close, store, select, add, fit, center, svgExport, importJson};
+  window.NabnakMindmaps = {open, close, suspend, store, select, add, fit, center, svgExport, importJson};
 })();
