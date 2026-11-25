@@ -13,8 +13,15 @@ const rules = [
   ['assigned-secret', /(?:api[_-]?key|access[_-]?token|client[_-]?secret|password)\s*[:=]\s*["'][A-Za-z0-9_+\/-]{24,}["']/i]
 ];
 function scan(bytes, label, findings) {
-  if (bytes.includes(0)) return; // binary assets
-  const text = bytes.toString('utf8');
+  let text;
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) text = bytes.subarray(2).toString('utf16le');
+  else if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+    const body = Buffer.from(bytes.subarray(2, 2 + Math.floor((bytes.length - 2) / 2) * 2));
+    text = body.swap16().toString('utf16le');
+  } else {
+    if (bytes.includes(0)) return; // Non-text binary assets; BOM-marked UTF-16 is handled above.
+    text = bytes.toString('utf8');
+  }
   for (const [name, pattern] of rules) if (pattern.test(text)) findings.push({file: label, rule: name});
 }
 function scanWorkingTree() {

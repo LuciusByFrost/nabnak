@@ -30,7 +30,13 @@
       if (++count > 250000 || depth > limits.depth) fail('resourceLimit');
       if (item === null || typeof item !== 'object') continue;
       if (seen.has(item)) fail(); seen.add(item);
-      for (const key of Object.keys(item)) {
+      // Bound pending work before allocating a stack entry per child. JSON can encode
+      // hundreds of thousands of tiny array values within the byte limit.
+      const remaining = 250000 - count - stack.length;
+      if (Array.isArray(item) && item.length > remaining) fail('resourceLimit');
+      const keys = Object.keys(item);
+      if (keys.length > remaining) fail('resourceLimit');
+      for (const key of keys) {
         if (dangerous.has(key)) fail('unsafeKeys');
         stack.push([item[key], depth + 1]);
       }

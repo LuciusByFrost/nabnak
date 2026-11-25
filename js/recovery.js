@@ -9,11 +9,14 @@
   const dataKeys = ['nabnak.data', 'nabnak.mindmaps', 'nabnak.mindMaps', 'nabnak.maps'];
   const preferences = {'nabnak.language': ['en', 'pt-BR', 'es'], 'nabnak.theme': ['system', 'light', 'dark'], 'nabnak.skin': ['original', 'lofi-cafe', 'lofi-midnight'], 'nabnak.themeIllustrations': ['true', 'false'], 'nabnak.sidebar': ['open', 'collapsed']};
   const keys = [...dataKeys, ...dataKeys.map(key => key + '.backup'), ...Object.keys(preferences)];
+  const PREVIOUS_KEY = 'nabnak.recovery.previous';
   const MAX_BYTES = 24 * 1024 * 1024;
-  function backup(storage, unsaved = {}) {
+  function backup(storage, unsaved = {}, includePrevious = true) {
     const entries = {};
     for (const key of keys) { const raw = storage.getItem(key); if (raw !== null) entries[key] = raw; }
-    return JSON.stringify({format: 'nabnak-recovery', version: 1, createdAt: new Date().toISOString(), entries, unsaved}, null, 2);
+    const envelope = {format: 'nabnak-recovery', version: 1, createdAt: new Date().toISOString(), entries, unsaved};
+    if (includePrevious) { const previous = storage.getItem(PREVIOUS_KEY); if (previous !== null) envelope.previous = previous; }
+    return JSON.stringify(envelope, null, 2);
   }
   function validate(raw, taskData, mindData) {
     const envelope = S.parse(raw, MAX_BYTES);
@@ -47,6 +50,8 @@
     const before = new Map(Object.keys(entries).map(key => [key, storage.getItem(key)]));
     const written = [];
     try {
+      // Durable, single-generation retention. If it cannot be saved, do not replace any content.
+      storage.setItem(PREVIOUS_KEY, backup(storage, {}, false));
       for (const [key, value] of Object.entries(entries)) { storage.setItem(key, value); written.push(key); }
     } catch {
       // localStorage has no multi-key transaction. Roll back completed writes; never clear unrelated data.
@@ -54,6 +59,6 @@
       throw new Error('recoveryError');
     }
   }
-  function clear(storage) { for (const key of keys) storage.removeItem(key); }
-  return {keys: Object.freeze(keys), MAX_BYTES, backup, validate, restore, clear};
+  function clear(storage) { for (const key of [...keys, PREVIOUS_KEY]) storage.removeItem(key); }
+  return {keys: Object.freeze([...keys, PREVIOUS_KEY]), PREVIOUS_KEY, MAX_BYTES, backup, validate, restore, clear};
 });

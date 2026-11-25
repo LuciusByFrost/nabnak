@@ -21,9 +21,8 @@
         if (file.size > R.MAX_BYTES) throw new Error('resourceLimit');
         const entries = R.validate(await file.text(), NabnakData, NabnakMindData);
         if (!window.confirm(t('restoreConfirm'))) return;
-        // Retain exact current bytes before any replacement, including unreadable data.
-        const before = R.backup(localStorage); R.restore(localStorage, entries);
-        window.NabnakRecoveryPrevious = before;
+        // The data layer retains current bytes durably before replacing included keys.
+        R.restore(localStorage, entries);
         report('recoveryDone'); window.location?.reload?.();
       } catch (error) { report(['resourceLimit', 'unsafeKeys', 'unsupportedVersion'].includes(error.message) ? error.message : 'recoveryError'); }
     }); input.click();

@@ -13,6 +13,14 @@
   const zones = Array.from(document.querySelectorAll('.dropZone'));
   const filters = {query: '', deadline: '', goal: '', status: ''};
   function announce(key) { document.getElementById('task-announcement').textContent = t(key); }
+  function mutate(change) {
+    try { change(); return true; } catch (error) {
+      render(); announce(error.message);
+      const warning = document.getElementById('storage-warning'); warning.hidden = false; warning.textContent = t(error.message);
+      return false;
+    }
+  }
+  window.NabnakMutate = mutate;
   const fields = {query: 'task-search', deadline: 'filter-deadline', goal: 'filter-goal', status: 'filter-status'};
   for (const [key, id] of Object.entries(fields)) {
     document.getElementById(id).addEventListener(key === 'query' ? 'input' : 'change', event => { filters[key] = event.target.value; render(); });
@@ -116,7 +124,7 @@
         const columnTasks = store.getState().tasks.filter(item => item.status === task.status);
         const index = columnTasks.findIndex(item => item.id === task.id);
         const neighbor = columnTasks[index + 1] || columnTasks[index - 1];
-        store.deleteTask(task.id);
+        if (!mutate(() => store.deleteTask(task.id))) return;
         announce('taskRemoved');
         const nextCard = Array.from(document.querySelectorAll('.card')).find(item => item.dataset.taskId === neighbor?.id);
         (nextCard?.querySelector('.card-delete') || document.getElementById('task')).focus();
@@ -161,7 +169,7 @@
       }
       move.value = task.status; guardCardAction(move, card);
       move.addEventListener('change', () => {
-        restoreCardDrag(); store.updateTask(task.id, {status: move.value}); announce('taskMoved');
+        restoreCardDrag(); if (!mutate(() => store.updateTask(task.id, {status: move.value}))) return; announce('taskMoved');
         const updated = Array.from(document.querySelectorAll('.card')).find(item => item.dataset.taskId === task.id);
         (updated?.querySelector('select') || document.getElementById('task-search')).focus();
       });
@@ -194,7 +202,7 @@
     zone.addEventListener('drop', event => {
       if (!draggedId) return; event.preventDefault();
       const id = draggedId; endDrag();
-      store.updateTask(id, {status: zone.id});
+      if (!mutate(() => store.updateTask(id, {status: zone.id}))) return;
       announce('taskMoved');
     });
   }

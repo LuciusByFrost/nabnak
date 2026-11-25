@@ -108,7 +108,7 @@
     } catch (error) { $('task-error').textContent = t(error.message); }
   });
   $('delete-task').addEventListener('click', () => {
-    if (editingId && window.confirm(t('deleteTaskConfirm'))) { store.deleteTask(editingId); editor.close(); }
+    if (editingId && window.confirm(t('deleteTaskConfirm'))) { if (NabnakMutate(() => store.deleteTask(editingId))) editor.close(); }
   });
   function focusGoal(goalId) {
     const card = Array.from($('goals-list').querySelectorAll('.goal-card')).find(card => card.dataset.goalId === goalId);
@@ -141,7 +141,7 @@
         text.append(make('span', '', NabnakTaskTitle(task)), make('span', `date-badge ${taskState(task)}`, t(taskState(task))));
         const editTaskButton = make('button', '', t('editTask')); editTaskButton.type = 'button'; editTaskButton.addEventListener('click', () => editTask(task.id));
         const unlink = make('button', '', t('unlink')); unlink.type = 'button';
-        unlink.addEventListener('click', () => { store.updateTask(task.id, {goalId: null}); focusGoal(goal.id); });
+        unlink.addEventListener('click', () => { if (NabnakMutate(() => store.updateTask(task.id, {goalId: null}))) focusGoal(goal.id); });
         row.append(text, editTaskButton, unlink); card.append(row);
       });
       const available = tasks.filter(task => !task.goalId);
@@ -155,7 +155,7 @@
         const submit = make('button', '', t('associate')); submit.type = 'submit'; form.append(submit);
         form.addEventListener('submit', event => {
           event.preventDefault(); if (!select.value) return;
-          store.updateTask(select.value, {goalId: goal.id}); focusGoal(goal.id);
+          if (NabnakMutate(() => store.updateTask(select.value, {goalId: goal.id}))) focusGoal(goal.id);
         });
         card.append(form);
       }
@@ -186,7 +186,7 @@
     } catch (error) { $('goal-error').textContent = t(error.message); }
   });
   $('delete-goal').addEventListener('click', () => {
-    if (editingGoalId && window.confirm(t('deleteGoalConfirm'))) { store.deleteGoal(editingGoalId); goalEditor.close(); }
+    if (editingGoalId && window.confirm(t('deleteGoalConfirm'))) { if (NabnakMutate(() => store.deleteGoal(editingGoalId))) goalEditor.close(); }
   });
   goalEditor.addEventListener('close', () => { if (!goalsDialog.hidden) focusGoal(editingGoalId); });
   editor.addEventListener('close', () => {
