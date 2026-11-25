@@ -7,10 +7,14 @@
     "test": "node --test --test-isolation=none tests/*.test.cjs",
     "test:browser": "node tests/browser/validate.cjs",
     "test:themes": "node tests/browser/themes.cjs",
-    "serve": "node tools/serve.cjs"
+    "serve": "node tools/serve.cjs",
+    "test:security:browser": "node tests/browser/security.cjs",
+    "test:secrets": "node tools/scan-secrets.cjs"
   },
   "devDependencies": {
     "playwright": "^1.56.0"
   },
-  "engines": { "node": ">=24" }
+  "engines": {
+    "node": ">=24"
+  }
 }
