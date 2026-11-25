@@ -107,7 +107,7 @@
       setOpen(false, true, true);
     }
     if (event.key === 'Tab' && !desktop?.matches && menu.classList.contains('is-open')) {
-      const controls = [toggle, ...panel.querySelectorAll('button, input, select')].filter(control => !control.disabled);
+      const controls = [toggle, ...panel.querySelectorAll('button, input, select, summary')].filter(control => !control.disabled && (!control.closest('details') || control.tagName === 'SUMMARY' || control.tagName === 'summary' || control.closest('details').open));
       const first = controls[0], last = controls[controls.length - 1];
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }

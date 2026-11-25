@@ -25,7 +25,7 @@
     form.addEventListener('submit', event => {
       event.preventDefault(); const input = form.querySelector('input');
       if (!input.value.trim()) return;
-      store.addTask({title: input.value, status: form.dataset.quickColumn});
+      try { store.addTask({title: input.value, status: form.dataset.quickColumn}); } catch (error) { announce(error.message); return; }
       input.value = ''; input.focus(); announce('taskCreated');
     });
   });
@@ -201,7 +201,7 @@
   document.getElementById('addTask').addEventListener('submit', event => {
     event.preventDefault(); const input = document.getElementById('task');
     if (!input.value.trim()) return;
-    store.addTask({title: input.value, dueDate: document.getElementById('new-task-date').value, goalId: document.getElementById('new-task-goal').value});
+    try { store.addTask({title: input.value, dueDate: document.getElementById('new-task-date').value, goalId: document.getElementById('new-task-goal').value}); } catch (error) { announce(error.message); return; }
     input.value = ''; document.getElementById('new-task-date').value = ''; input.focus();
     announce('taskCreated');
   });

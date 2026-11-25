@@ -5,6 +5,7 @@
   else root.NabnakMindData = api;
 })(typeof window === 'object' ? window : globalThis, function () {
   'use strict';
+  const S = typeof module === 'object' && module.exports ? require('./security.js') : NabnakSecurity;
   const KEY = 'nabnak.mindmaps', VERSION = 2;
   const clone = value => JSON.parse(JSON.stringify(value));
   const id = () => 'mm-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
@@ -18,69 +19,89 @@
     return {width, height: node.height || estimate};
   }
   function newMap(title, centralTitle) {
+    S.text(title, S.limits.title, true); S.text(centralTitle, S.limits.title);
     const rootId = id();
     return {id: id(), title, rootId, nodes: [{id: rootId, title: centralTitle, description: '', color: palette[0], x: 0, y: 0, isRoot: true, parentId: null, manual: false, collapsed: false}], edges: [], camera: {x: 0, y: 0, zoom: 1}};
   }
-  function normalizeMap(raw) {
-    if (!raw || !Array.isArray(raw.nodes) || !raw.nodes.length) throw new Error('mmReadError');
-    const seen = new Set();
+  function normalizeMap(raw, preserve = false) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('mmReadError');
+    S.count(raw.nodes, S.limits.nodes);
+    if (!raw.nodes.length) throw new Error('mmReadError');
+    const seen = new Set(), byId = new Map();
     const nodes = raw.nodes.map(item => {
-      if (!item || typeof item.id !== 'string' || seen.has(item.id)) throw new Error('mmReadError');
+      S.object(item);
+      S.identifier(item.id);
+      if (seen.has(item.id)) throw new Error('mmReadError');
       seen.add(item.id);
-      const x = item.x ?? item.position?.x, y = item.y ?? item.position?.y;
-      return {...item, title: String(item.title ?? item.text ?? item.label ?? ''), description: String(item.description || ''), color: color(item.color), x: finite(x), y: finite(y), width: undefined, height: undefined,
-        manual: item.manual ?? (Number.isFinite(x) && Number.isFinite(y)), collapsed: Boolean(item.collapsed), parentId: item.parentId || null};
+      const x = item.x ?? item.position?.x ?? 0, y = item.y ?? item.position?.y ?? 0;
+      if (item.color !== undefined && (typeof item.color !== 'string' || !/^#[\da-f]{6}$/i.test(item.color))) throw new Error('invalidInput');
+      for (const flag of ['manual', 'collapsed', 'isRoot']) if (item[flag] !== undefined && typeof item[flag] !== 'boolean') throw new Error('invalidInput');
+      for (const dim of ['width', 'height']) if (item[dim] !== undefined) S.number(item[dim], 1, 50000);
+      const node = {...(preserve ? item : {}), id: item.id,
+        title: S.text(item.title ?? item.text ?? item.label ?? '', S.limits.title),
+        description: S.text(item.description ?? '', S.limits.description), color: color(item.color),
+        x: S.number(x), y: S.number(y), width: item.width, height: item.height,
+        manual: item.manual ?? (Number.isFinite(item.x ?? item.position?.x) && Number.isFinite(item.y ?? item.position?.y)),
+        collapsed: item.collapsed ?? false, parentId: item.parentId ?? null};
+      if (item.side !== undefined) { if (![1, -1].includes(item.side)) throw new Error('invalidInput'); node.side = item.side; }
+      if (node.parentId !== null) S.identifier(node.parentId);
+      byId.set(node.id, node); return node;
     });
-    const rootId = raw.rootId || nodes.find(node => node.isRoot)?.id || nodes.find(node => !node.parentId)?.id || nodes[0].id;
-    if (!seen.has(rootId)) throw new Error('mmReadError');
-    if (nodes.find(node => node.id === rootId).parentId) throw new Error('mmReadError');
-    const edges = [], pairs = new Set();
-    for (const edge of raw.edges || raw.connections || []) {
-      const source = edge.source ?? edge.from, target = edge.target ?? edge.to;
+    const rootId = raw.rootId ?? raw.nodes.find(node => node.isRoot)?.id ?? nodes.find(node => !node.parentId)?.id ?? nodes[0].id;
+    S.identifier(rootId);
+    if (!seen.has(rootId) || byId.get(rootId).parentId) throw new Error('mmReadError');
+    const edges = [], pairs = new Map(), edgeIds = new Set();
+    for (const edge of S.count(raw.edges ?? raw.connections ?? [], S.limits.edges)) {
+      S.object(edge);
+      const source = S.identifier(edge.source ?? edge.from), target = S.identifier(edge.target ?? edge.to);
       if (!seen.has(source) || !seen.has(target) || source === target) throw new Error('mmReadError');
+      const edgeId = edge.id === undefined ? id() : S.identifier(edge.id);
+      if (edgeIds.has(edgeId)) throw new Error('mmReadError'); edgeIds.add(edgeId);
+      if (edge.kind !== undefined && !['tree', 'link'].includes(edge.kind)) throw new Error('invalidInput');
+      if (edge.kind === 'tree') {
+        const child = byId.get(target);
+        if (target === rootId || child.parentId && child.parentId !== source) throw new Error('mmReadError');
+        child.parentId = source;
+      }
       const pair = [source, target].sort().join('\0');
-      if (pairs.has(pair)) continue; pairs.add(pair);
-      edges.push({...edge, id: edge.id || id(), source, target, kind: edge.kind === 'tree' ? 'tree' : 'link'});
+      if (pairs.has(pair)) { if (edge.kind === 'tree') pairs.get(pair).kind = 'tree'; continue; }
+      const clean = {...(preserve ? edge : {}), id: edgeId, source, target, kind: edge.kind === 'tree' ? 'tree' : 'link'};
+      pairs.set(pair, clean); edges.push(clean);
     }
+    // Each parent pointer is visited once. Bound depth for the recursive layout engine.
+    const depths = new Map();
     for (const node of nodes) {
+      const chain = [], visiting = new Set(); let current = node;
+      while (current && !depths.has(current.id)) {
+        if (visiting.has(current.id)) throw new Error('mmReadError');
+        visiting.add(current.id); chain.push(current);
+        if (chain.length > S.limits.depth) throw new Error('resourceLimit');
+        if (current.parentId && !byId.has(current.parentId)) throw new Error('mmReadError');
+        current = byId.get(current.parentId);
+      }
+      let depth = current ? depths.get(current.id) : 0;
+      while (chain.length) { const item = chain.pop(); if (++depth > S.limits.depth) throw new Error('resourceLimit'); depths.set(item.id, depth); }
       node.isRoot = node.id === rootId;
-      if (node.isRoot) node.parentId = null;
-      if (node.parentId && !seen.has(node.parentId)) throw new Error('mmReadError');
-      const chain = new Set([node.id]); let parent = node.parentId;
-      while (parent) {
-        if (chain.has(parent)) throw new Error('mmReadError'); chain.add(parent);
-        parent = nodes.find(item => item.id === parent)?.parentId;
-      }
       if (node.parentId) {
-        const edge = edges.find(edge => edge.source === node.parentId && edge.target === node.id);
-        if (edge) edge.kind = 'tree';
-        else edges.push({id: id(), source: node.parentId, target: node.id, kind: 'tree'});
+        const pair = [node.parentId, node.id].sort().join('\0'), edge = pairs.get(pair);
+        if (edge) { edge.source = node.parentId; edge.target = node.id; edge.kind = 'tree'; }
+        else { const edge = {id: id(), source: node.parentId, target: node.id, kind: 'tree'}; edges.push(edge); pairs.set(pair, edge); }
       }
     }
-    // Older files may express hierarchy only through explicitly typed tree edges.
-    for (const edge of edges.filter(edge => edge.kind === 'tree')) {
-      const target = nodes.find(node => node.id === edge.target);
-      if (target.id === rootId || target.parentId && target.parentId !== edge.source) throw new Error('mmReadError');
-      target.parentId = edge.source;
-    }
-    for (const node of nodes) {
-      const chain = new Set(); let current = node;
-      while (current) {
-        if (chain.has(current.id)) throw new Error('mmReadError'); chain.add(current.id);
-        current = nodes.find(item => item.id === current.parentId);
-      }
-    }
-    const camera = raw.camera || raw.viewport || {};
-    return {...raw, id: raw.id || id(), title: String(raw.title || raw.name || 'Mind map'), rootId, nodes, edges,
-      camera: {x: finite(camera.x), y: finite(camera.y), zoom: Math.max(.01, Math.min(3, finite(camera.zoom, 1)))}};
+    S.count(edges, S.limits.edges);
+    const camera = S.object(raw.camera ?? raw.viewport ?? {});
+    return {...(preserve ? raw : {}), id: raw.id === undefined ? id() : S.identifier(raw.id),
+      title: S.text(raw.title ?? raw.name ?? 'Mind map', S.limits.title, true), rootId, nodes, edges,
+      camera: {x: S.number(camera.x ?? 0), y: S.number(camera.y ?? 0), zoom: S.number(camera.zoom ?? 1, .01, 3)}};
   }
-  function decode(raw) {
-    if (raw?.version > VERSION) throw new Error('mmReadError');
-    const maps = Array.isArray(raw) ? raw : raw?.maps || (raw?.nodes ? [raw] : null);
-    if (!Array.isArray(maps)) throw new Error('mmReadError');
-    const normalized = maps.map(normalizeMap);
+  function decode(raw, preserve = false) {
+    S.inspect(raw); S.version(raw?.version);
+    const maps = Array.isArray(raw) ? raw : raw?.maps ?? (raw?.nodes ? [raw] : null);
+    S.count(maps, S.limits.maps);
+    const normalized = maps.map(map => normalizeMap(map, preserve));
     if (new Set(normalized.map(map => map.id)).size !== normalized.length) throw new Error('mmReadError');
-    return {...(!Array.isArray(raw) && raw), version: VERSION, maps: normalized, activeMapId: normalized.some(map => map.id === raw.activeMapId) ? raw.activeMapId : normalized[0]?.id || null};
+    if (raw.activeMapId !== undefined && raw.activeMapId !== null && !normalized.some(map => map.id === raw.activeMapId)) throw new Error('invalidInput');
+    return {...(preserve && !Array.isArray(raw) ? raw : {}), version: VERSION, maps: normalized, activeMapId: raw.activeMapId ?? normalized[0]?.id ?? null};
   }
   function createStore(storage) {
     let state = {version: VERSION, maps: [], activeMapId: null}, error = '', readonly = false, original = null, originKey = KEY;
@@ -88,33 +109,43 @@
     try {
       for (const key of [KEY, 'nabnak.mindMaps', 'nabnak.maps']) {
         const value = storage.getItem(key);
-        if (value !== null) { original = value; originKey = key; state = decode(JSON.parse(value)); break; }
+        if (value !== null) { original = value; originKey = key; state = decode(S.parse(value), true); break; }
       }
     } catch { error = 'mmReadError'; readonly = true; }
-    function save() {
-      if (readonly) return;
+    let expected = null;
+    try { expected = storage.getItem(KEY); } catch { /* Read error already reported. */ }
+    function save(candidate = state, atomic = false) {
+      if (readonly) { if (atomic) throw new Error('mmReadError'); return; }
       try {
+        if (storage.getItem(KEY) !== expected) throw new Error('storageConflict');
         // Before the first write, retain an exact copy of the original serialized data.
         if (original !== null && storage.getItem(originKey + '.backup') === null) storage.setItem(originKey + '.backup', original);
-        storage.setItem(KEY, JSON.stringify(state)); error = '';
-      } catch { error = 'mmWriteError'; }
+        const serialized = JSON.stringify(candidate); S.parse(serialized);
+        storage.setItem(KEY, serialized); expected = serialized; error = '';
+      } catch (failure) { error = failure.message === 'storageConflict' ? 'storageConflict' : 'mmWriteError'; if (atomic) throw new Error(error); }
     }
     const notify = (kind = 'edit') => listeners.forEach(listener => listener(kind));
+    if (typeof window === 'object') window.addEventListener?.('storage', event => {
+      if ((event.key === KEY || event.key === null) && event.storageArea === storage) { readonly = true; error = 'storageConflict'; notify(); }
+    });
     return {
       getState: () => clone(state), getError: () => error, isReadOnly: () => readonly,
       canUndo: () => past.length > 0, canRedo: () => future.length > 0,
       subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
-      edit(change) {
+      edit(change, {atomic = false} = {}) {
         if (readonly) throw new Error('mmReadError');
-        const draft = clone(state); change(draft);
+        let draft = clone(state); change(draft); draft = decode(draft, true);
+        S.parse(JSON.stringify(draft));
         if (JSON.stringify(draft) === JSON.stringify(state)) return false;
-        past.push(clone(state)); if (past.length > 60) past.shift(); future.length = 0;
-        state = draft; save(); notify(); return true;
+        if (atomic) save(draft, true);
+        past.push(clone(state));
+        while (past.length > 60 || past.length > 1 && past.reduce((bytes, item) => bytes + JSON.stringify(item).length, 0) > 5 * 1024 * 1024) past.shift(); future.length = 0;
+        state = draft; if (!atomic) save(); notify(); return true;
       },
       view(mapId, camera) {
         if (readonly) return;
         const map = state.maps.find(map => map.id === mapId);
-        if (map) map.camera = {x: finite(camera.x), y: finite(camera.y), zoom: Math.max(.01, Math.min(3, finite(camera.zoom, 1)))};
+        if (map) { try { map.camera = {x: S.number(camera.x), y: S.number(camera.y), zoom: S.number(camera.zoom, .01, 3)}; } catch { error = 'invalidInput'; return; } }
         save(); notify('view');
       },
       activate(mapId) { if (!state.maps.some(map => map.id === mapId)) return; state.activeMapId = mapId; save(); notify(); },
@@ -134,6 +165,7 @@
     });
   }
   function addNode(map, parentId, title) {
+    S.text(title, S.limits.title, true); if (map.nodes.length >= S.limits.nodes || map.edges.length >= S.limits.edges) throw new Error('resourceLimit');
     const parent = map.nodes.find(node => node.id === parentId) || map.nodes.find(node => node.id === map.rootId);
     const child = {id: id(), title, description: '', parentId: parent.id, color: parent.isRoot ? palette[(map.nodes.filter(node => node.parentId === parent.id).length + 1) % palette.length] : parent.color,
       x: parent.x, y: parent.y, manual: false, collapsed: false, isRoot: false};
@@ -174,8 +206,13 @@
     const nodes = visibleNodes(map), root = nodes.find(node => node.id === map.rootId);
     if (!root) return;
     for (const node of nodes) { const size = measure(node); node.width = size.width; node.height = size.height; if (force) node.manual = false; }
-    const children = node => nodes.filter(child => child.parentId === node.id);
-    const span = node => Math.max(nodeSize(node).height, children(node).reduce((sum, child) => sum + span(child) + 32, -32));
+    const childLists = new Map(nodes.map(node => [node.id, []])), spans = new Map();
+    for (const node of nodes) childLists.get(node.parentId)?.push(node);
+    const children = node => childLists.get(node.id) || [];
+    const span = node => {
+      if (!spans.has(node.id)) spans.set(node.id, Math.max(nodeSize(node).height, children(node).reduce((sum, child) => sum + span(child) + 32, -32)));
+      return spans.get(node.id);
+    };
     const branches = nodes.filter(node => node.id !== root.id && (!node.parentId || node.parentId === root.id));
     const left = [], right = []; let lh = 0, rh = 0;
     for (const branch of branches) {

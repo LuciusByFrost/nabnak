@@ -28,7 +28,7 @@
   const dimensions = () => { const rect = viewport.getBoundingClientRect(); return {width: rect.width || 900, height: rect.height || 600}; };
   function status() { $('mm-message').textContent = t(store.getError() || message || (connecting ? 'mmConnectHint' : 'mmSaved')); }
   function transact(change) {
-    try { message = ''; store.edit(change); } catch (error) { message = error.message; status(); }
+    try { message = ''; return store.edit(change); } catch (error) { message = error.message; status(); return false; }
   }
   function editMap(change) { transact(state => { const map = state.maps.find(map => map.id === state.activeMapId); if (map) change(map); }); }
   function card(node, interactive = true) {
@@ -42,6 +42,24 @@
     if (node.collapsed) element.append(make('p', 'mm-collapsed', t('mmCollapsed')));
     if (interactive) {
       element.tabIndex = 0; element.setAttribute('role', 'group'); element.setAttribute('aria-label', node.title);
+        const insertPlain = event => {
+          event.preventDefault(); event.stopPropagation();
+          if (title.getAttribute('contenteditable') !== 'true') return;
+          const text = (event.clipboardData || event.dataTransfer)?.getData('text/plain') || '';
+          const selection = window.getSelection?.();
+          const inside = selection?.rangeCount && title.contains(selection.anchorNode) && title.contains(selection.focusNode);
+          const removed = inside ? selection.toString().length : 0;
+          if (text.length + title.textContent.length - removed > NabnakSecurity.limits.title) { message = 'inputTooLong'; status(); return; }
+          if (inside) {
+            const range = selection.getRangeAt(0); range.deleteContents();
+            const node = document.createTextNode(text); range.insertNode(node); range.setStartAfter(node); range.collapse(true);
+            selection.removeAllRanges(); selection.addRange(range);
+          } else title.textContent += text;
+        };
+        title.addEventListener('paste', insertPlain); title.addEventListener('drop', insertPlain);
+        title.addEventListener('beforeinput', event => {
+          if (['insertFromPaste', 'insertFromDrop', 'insertHTML'].includes(event.inputType)) event.preventDefault();
+        });
       title.addEventListener('dblclick', event => {
         event.stopPropagation(); if (store.isReadOnly() || connecting) return;
         title.setAttribute('contenteditable', 'true'); title.setAttribute('aria-label', t('mmTitle')); title.setAttribute('title', t('mmSaveTitle')); title.focus();
@@ -192,6 +210,8 @@
   function updateNode(patch) {
     const node = nodeNow(); if (!node) return;
     editMap(map => {
+      if (patch.title !== undefined) NabnakSecurity.text(patch.title, NabnakSecurity.limits.title, true);
+      if (patch.description !== undefined) NabnakSecurity.text(patch.description, NabnakSecurity.limits.description);
       const current = map.nodes.find(item => item.id === node.id); Object.assign(current, patch); delete current.height;
       if (patch.color && !current.isRoot) {
         const branch = new Set([current.id]); let changed = true;
@@ -210,8 +230,9 @@
     editMap(map => { D.removeNode(map, node.id); arrange(map); }); selectedId = node.parentId; render(); focusSelected();
   }
   function svgExport(map) {
+    NabnakSecurity.inspect(map); map = D.normalizeMap(map);
     const box = D.bounds(map), padding = 40;
-    const escape = value => String(value).replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;'}[char]));
+    const escape = value => String(value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF\uD800-\uDFFF]/gu, '\uFFFD').replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;'}[char]));
     const nodes = D.visibleNodes(map), byId = new Map(nodes.map(node => [node.id, node]));
     const lines = [];
     for (const edge of map.edges) {
@@ -242,24 +263,26 @@
   }
   function importJson(text) {
     try {
-        const incoming = D.decode(JSON.parse(text));
+        const incoming = D.decode(NabnakSecurity.parse(text));
         if (store.isReadOnly()) throw new Error('mmReadError');
         // Imported IDs are remapped so an import can never replace an existing map.
-        transact(state => {
+        store.edit(state => {
           for (const original of incoming.maps) {
             const map = D.clone(original), replacement = D.newMap(map.title, ''); const ids = new Map(map.nodes.map((node, i) => [node.id, replacement.id + '-' + i]));
             map.id = replacement.id; map.rootId = ids.get(map.rootId);
             map.nodes.forEach(node => { node.id = ids.get(node.id); node.parentId = ids.get(node.parentId) || null; });
             map.edges.forEach((edge, i) => { edge.id = map.id + '-edge-' + i; edge.source = ids.get(edge.source); edge.target = ids.get(edge.target); });
+            const {width, height} = dimensions(); map.camera = D.fitCamera(map, width, height);
             state.maps.push(map); state.activeMapId = map.id;
           }
-        }); render(); fit(); return true;
-    } catch { message = 'mmImportError'; status(); return false; }
+        }, {atomic: true}); render(); return true;
+    } catch (error) { message = ['resourceLimit', 'unsafeKeys', 'unsupportedVersion', 'inputTooLong', 'storageConflict', 'mmWriteError'].includes(error.message) ? error.message : 'mmImportError'; status(); return false; }
   }
   function importFile() {
     const input = make('input'); input.type = 'file'; input.accept = 'application/json,.json';
     input.addEventListener('change', async () => {
       const file = input.files?.[0]; if (!file) return;
+      if (file.size > NabnakSecurity.limits.bytes) { message = 'resourceLimit'; status(); return; }
       try { importJson(await file.text()); } catch { message = 'mmImportError'; status(); }
     }); input.click();
   }
@@ -397,9 +420,9 @@
     const mapTitle = $('mm-map-name').value.trim();
     if (map && ((mapTitle && mapTitle !== map.title) || (node && ((title && title !== node.title) || description !== node.description || color !== node.color)))) {
       editMap(current => {
-        if (mapTitle) current.title = mapTitle;
+        if (mapTitle) current.title = NabnakSecurity.text(mapTitle, NabnakSecurity.limits.title, true);
         const selected = current.nodes.find(item => item.id === selectedId);
-        if (selected) { if (title) selected.title = title; selected.description = description; selected.color = color; arrange(current); }
+        if (selected) { if (title) selected.title = NabnakSecurity.text(title, NabnakSecurity.limits.title, true); selected.description = NabnakSecurity.text(description, NabnakSecurity.limits.description); selected.color = color; arrange(current); }
       });
     }
     saveCamera();

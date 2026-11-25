@@ -21,3 +21,8 @@
 .theme-illustration-label input { margin-top: 3px; }
 #theme-select:disabled { opacity: 1; color: var(--muted); cursor: default; }
 
+
+.recovery-controls { margin-top: 12px; font-size: .8125rem; color: var(--text); }
+.recovery-controls summary { cursor: pointer; min-height: 44px; display: list-item; padding-block: 12px; }
+.recovery-controls p { line-height: 1.5; margin-block: 8px; }
+.recovery-controls button { display: block; width: 100%; min-height: 44px; margin-block: 8px; padding: 8px; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }

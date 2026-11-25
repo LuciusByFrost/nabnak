@@ -4,6 +4,7 @@
   else root.NabnakData = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
+  const S = typeof module === 'object' && module.exports ? require('./security.js') : NabnakSecurity;
   const STORAGE_KEY = 'nabnak.data';
   const STATUSES = ['todo', 'doing', 'done'];
   const copy = value => JSON.parse(JSON.stringify(value));
@@ -56,12 +57,27 @@
     let counter = 0;
     const id = () => globalThis.crypto?.randomUUID?.() || `n-${Date.now()}-${++counter}-${Math.random().toString(36).slice(2)}`;
     let error = null;
-    let writable = true;
+    let writable = true, expected = null, original = null;
     let state = {version: 2, tasks: copy(seedTasks), goals: []};
     try {
-      const raw = storage.getItem(STORAGE_KEY);
+      const raw = storage.getItem(STORAGE_KEY); expected = raw; original = raw;
       if (raw !== null) {
-        const saved = JSON.parse(raw);
+        const saved = S.object(S.parse(raw)); S.version(saved.version);
+        S.count(saved?.tasks, S.limits.tasks); S.count(saved.goals ?? [], S.limits.goals);
+        for (const task of saved.tasks) {
+          if (!task || typeof task !== 'object' || Array.isArray(task)) throw new Error('invalidTasks');
+          S.text(task.title ?? task.text ?? task.content ?? '', S.limits.title);
+          if (task.id !== undefined) S.identifier(task.id);
+          if (task.goalId !== undefined && task.goalId !== null) S.identifier(task.goalId);
+          if (task.status !== undefined && !STATUSES.includes(task.status)) throw new Error('invalidStatus');
+          if (task.dueDate && !validDate(task.dueDate)) throw new Error('invalidDate');
+          if (task.exampleKey !== undefined && !['exampleTodo', 'exampleDoing', 'exampleDone'].includes(task.exampleKey)) throw new Error('invalidInput');
+        }
+        for (const goal of saved.goals ?? []) {
+          if (!goal || typeof goal !== 'object' || Array.isArray(goal)) throw new Error('invalidGoals');
+          S.text(goal.title, S.limits.title, true); S.text(goal.description ?? '', S.limits.description);
+          if (goal.id !== undefined) S.identifier(goal.id);
+        }
         if (!saved || !Array.isArray(saved.tasks) || (saved.version && saved.version > 2)) throw new Error('unsupported');
         if (saved.tasks.some(task => !task || typeof task !== 'object')) throw new Error('invalidTasks');
         if (saved.goals !== undefined && (!Array.isArray(saved.goals) || saved.goals.some(goal => !goal || typeof goal.title !== 'string' || !goal.title.trim() || !validDate(goal.dueDate) || !Number.isSafeInteger(goal.target) || goal.target < 1))) throw new Error('invalidGoals');
@@ -91,12 +107,17 @@
     const listeners = new Set();
     function persist() {
       if (!writable) return;
-      try { storage.setItem(STORAGE_KEY, JSON.stringify(state)); error = null; }
-      catch { error = 'storageWriteError'; }
+      try {
+        if (storage.getItem(STORAGE_KEY) !== expected) { error = 'storageConflict'; return; }
+        const serialized = JSON.stringify(state); S.parse(serialized);
+        if (original !== null && storage.getItem(STORAGE_KEY + '.backup') === null) storage.setItem(STORAGE_KEY + '.backup', original);
+        storage.setItem(STORAGE_KEY, serialized); expected = serialized; error = null;
+      } catch { error = 'storageWriteError'; }
     }
     function changed() { persist(); listeners.forEach(listener => listener()); }
     function fields(input, current = {}) {
-      const title = String(input.title ?? current.title ?? '').trim();
+      S.object(input); S.inspect(input);
+      const title = S.text(input.title ?? current.title ?? '', S.limits.title).trim();
       if (!title) throw new Error('requiredTitle');
       const dueDate = input.dueDate === undefined ? current.dueDate || null : input.dueDate || null;
       if (dueDate && !validDate(dueDate)) throw new Error('invalidDate');
@@ -109,19 +130,23 @@
       return result;
     }
     function goalFields(input, current = {}) {
-      const title = String(input.title ?? current.title ?? '').trim();
+      S.object(input); S.inspect(input);
+      const title = S.text(input.title ?? current.title ?? '', S.limits.title).trim();
       if (!title) throw new Error('requiredTitle');
       const dueDate = input.dueDate ?? current.dueDate;
       if (!validDate(dueDate)) throw new Error('requiredDeadline');
       const target = Number(input.target ?? current.target);
       if (!Number.isSafeInteger(target) || target < 1) throw new Error('invalidTarget');
-      return {...current, title, description: String(input.description ?? current.description ?? ''), dueDate, target};
+      return {...current, title, description: S.text(input.description ?? current.description ?? '', S.limits.description), dueDate, target};
     }
+    if (typeof window === 'object') window.addEventListener?.('storage', event => {
+      if ((event.key === STORAGE_KEY || event.key === null) && event.storageArea === storage) { writable = false; error = 'storageConflict'; listeners.forEach(listener => listener()); }
+    });
     persist();
     return {
       getState: () => copy(state), getError: () => error,
       subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
-      addTask(input) { const task = {...fields(input), id: id()}; state.tasks.push(task); changed(); return copy(task); },
+      addTask(input) { if (state.tasks.length >= S.limits.tasks) throw new Error('resourceLimit'); const task = {...fields(input), id: id()}; state.tasks.push(task); changed(); return copy(task); },
       updateTask(taskId, input) {
         const index = state.tasks.findIndex(task => task.id === taskId);
         if (index < 0) throw new Error('missingTask');
@@ -129,7 +154,7 @@
       },
       deleteTask(taskId) { state.tasks = state.tasks.filter(task => task.id !== taskId); changed(); },
       tasksOn(date) { return copy(state.tasks.filter(task => task.dueDate === date)); },
-      addGoal(input) { const goal = {...goalFields(input), id: id()}; state.goals.push(goal); changed(); return copy(goal); },
+      addGoal(input) { if (state.goals.length >= S.limits.goals) throw new Error('resourceLimit'); const goal = {...goalFields(input), id: id()}; state.goals.push(goal); changed(); return copy(goal); },
       updateGoal(goalId, input) {
         const index = state.goals.findIndex(goal => goal.id === goalId);
         if (index < 0) throw new Error('missingGoal');

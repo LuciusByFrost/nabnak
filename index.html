@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; script-src-attr 'none'; style-src 'self'; style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'">
+  <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#fd951fcc"/>
   <title>NABNAK</title>
@@ -12,7 +14,7 @@
     
   <meta name="robots" content="index">
 
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/fonts.css">
   <link rel="stylesheet" href="./css/tokens.css">
   <link rel="stylesheet" href="./css/style.css">
   <link rel="stylesheet" href="./css/planner.css">
@@ -40,6 +42,14 @@
         <button id="open-mindmaps" type="button" data-view="mindmaps" data-i18n="mmMaps">Mind maps</button>
       </nav>
       <div class="sidebar-preferences">
+      <details class="recovery-controls">
+        <summary data-i18n="dataPrivacy">Privacy and recovery</summary>
+        <p data-i18n="privacyInfo">Data stays in this browser. It is not encrypted.</p>
+        <button id="backup-data" type="button" data-i18n="backupData">Download recovery backup</button>
+        <button id="restore-data" type="button" data-i18n="restoreData">Restore recovery backup</button>
+        <button id="clear-data" type="button" data-i18n="clearData">Clear NABNAK data</button>
+        <p id="recovery-message" role="status" aria-live="polite"></p>
+      </details>
       <fieldset>
         <legend><svg class="sidebar-section-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></svg><span data-i18n="language">Language</span></legend>
         <label><input type="radio" name="language" value="pt-BR"><span lang="pt-BR">Português (Brasil)</span></label>
@@ -66,6 +76,7 @@
         </button>
       </fieldset>
       <label class="theme-illustration-label"><input id="theme-illustrations" type="checkbox" disabled><span data-i18n="themeIllustrations">Small lo-fi illustrations</span></label>
+
       </div>
     </div>
   </div>
@@ -242,10 +253,12 @@
     </form>
   </dialog>
 
+  <script src="./js/security.js" defer></script>
   <script src="./js/store.js" defer></script>
   <script src="./js/planner-translations.js" defer></script>
   <script src="./js/mindmap-translations.js" defer></script>
   <script src="./js/redesign-translations.js" defer></script>
+  <script src="./js/security-translations.js" defer></script>
   <script src="./js/i18n.js" defer></script>
   <script src="./js/task-filters.js" defer></script>
   <script src="./js/script.js" defer></script>
@@ -254,5 +267,7 @@
   <script src="./js/mindmap-data.js" defer></script>
   <script src="./js/mindmap.js" defer></script>
   <script src="./js/shell.js" defer></script>
+  <script src="./js/recovery.js" defer></script>
+  <script src="./js/recovery-ui.js" defer></script>
 </body>
 </html>
