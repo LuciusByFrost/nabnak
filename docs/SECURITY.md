@@ -2,6 +2,65 @@
 
 Audit date: 2026-11-25. Base revision: `952dbd8ffbcdd83a7cade6dc68361bd140fa4b16`. Scope: the local checkout of `LuciusByFrost/nabnak`, all application JavaScript, HTML, CSS, SVGs, tools, dependencies, tests and locally available Git history. This is a source review with executable unit/integration checks, not a claim that every browser exploit or deployed GitHub setting was verified. No backend, authentication, analytics or production dependency was added. No push or deployment was authorized or performed.
 
+## Independent re-audit of the hardening implementation
+
+Re-audit date: 2026-11-25. Reviewed starting revision: `6259a25`. The earlier findings and test counts below are historical; this section records the current independent review. No prior protection was assumed correct. No Critical or High vulnerability was confirmed. This does not certify the absence of such vulnerabilities, particularly while real-browser enforcement remains unverified.
+
+### Confirmed findings and fixes
+
+| ID | Severity | Reproduction, impact and fix |
+| --- | --- | --- |
+| RA-01 | Medium | A task/goal edit could push the serialized state past the 2 MiB limit. The edit was accepted into memory but persistence and recovery validation rejected it, undermining the advertised export/recovery path. A regression starts with valid metadata just below the limit and adds an individually valid 2,000-character goal description. Content CRUD now validates the whole candidate before publishing it; board moves and goal association actions report rejected edits through the existing translated warning. Rejected edits leave both state and saved bytes unchanged; genuine browser quota failures still retain supported-size work in memory. |
+| RA-02 | Medium | Stored tasks referencing missing goals, dates such as `false`/`0`, and blank titles were accepted and normalized, then written back with altered values. Tests confirmed this behavior before the fix. Validation now rejects these records before normalization, and rejects falsy invalid dates/references in direct task edits and preserves the original storage bytes with `storageReadError`. Supported legacy field names and duplicate-task-ID migration continue to pass existing tests. |
+| RA-03 | Medium | The restore UI assigned the previous-data snapshot to `window.NabnakRecoveryPrevious` and immediately reloaded. This destroyed the snapshot; the replacement could leave no durable copy of the replaced active data. The data layer now saves a version 1 recovery envelope under `nabnak.recovery.previous` before any replacement. Failure to retain that snapshot aborts replacement. It retains one generation, excludes older snapshots from the new snapshot to prevent recursive growth, is included as the `previous` string in downloaded recovery envelopes, and is removed by confirmed NABNAK-only clearing. Tests verify success, quota abort and reload persistence. |
+| RA-04 | Low | The secret scanner treated every NUL-containing file as binary, silently skipping BOM-marked UTF-16 credentials. Synthetic LE and BE token fixtures reproduced the miss. The scanner now decodes both BOM variants before matching, while keeping matched values out of logs. It is still a limited pattern scanner, not comprehensive secret detection. |
+| RA-05 | Low | The browser security suite clicked an import button inside a closed `details` menu, which would prevent reaching its malicious-file assertions. Its CSP test also relied on the stronger development-server response header and did not independently exercise the Pages meta policy. The suite now opens the menu normally, waits for file-read completion, and tests a routed HTML document without a CSP response header. It checks inline/eval/handler/external-script, connection, object, base and form restrictions, plus permitted dynamic map positioning. These added browser assertions remain unexecuted because browser launch is blocked. |
+| RA-06 | Low | The traversal limit was checked after all child values had already been pushed onto the work stack. A small JSON array can contain hundreds of thousands of values, causing avoidable work/allocation before rejection. Array length and pending-child budgets are now checked before expansion; a regression verifies that an over-budget array is rejected before its child accessor is touched. The 2 MiB parser limit still applies before JSON parsing. |
+
+Five targeted tests were run before the fixes and all five failed, reproducing RA-01?RA-04 (RA-03 has two tests). The sixth traversal regression was added with the budget fix; a seventh verifies translated board-move rejection at the size boundary. This is distinct from browser exploit reproduction: no native clipboard XSS or runtime CSP bypass was demonstrated.
+
+### Protection-by-protection review
+
+- **DOM/text and SVG:** task/goal/map titles and descriptions use text sinks. Reviewed generated attributes, selectors, CSS geometry, SVG XML escaping and control-character handling. Existing and new unit tests confirm inert HTML-looking text and reject malicious dimensions/colors. No new executable user-content sink was found. Clipboard event guards prevent default rich insertion and use plain text; native browser behavior still needs the blocked browser suite.
+- **JSON/prototype safety:** byte limits, pre-read checks, version validation, recursive dangerous-key rejection, import field projection, numeric/ID limits, node/edge/map limits, indexed parent validation, cycles, hierarchy depth and atomic failure paths were reviewed and exercised by unit tests. Prototype-pollution fixtures leave the global prototype unchanged. RA-06 tightens the traversal budget; parsing is synchronous and remains bounded rather than instantaneous.
+- **Persistence/recovery:** invalid storage remains unmodified, quota and stale-write tests pass, and imports require persistence before committing state/history. RA-01?RA-03 close additional integrity/recovery gaps. localStorage still has no encrypted storage or atomic multi-key transaction, and check-then-set races remain possible.
+- **CSP:** source inspection confirms the policy appears before resource declarations, allows no inline/eval scripts, and has no unsupported meta-only `frame-ancestors` claim. The explicit style-attribute allowance supports the existing map transforms. Header and meta-only enforcement tests are present, but **runtime CSP effectiveness is not verified in this environment**. A static assertion is not a substitute for browser enforcement. Meta restrictions were checked against the [W3C CSP specification](https://www.w3.org/TR/CSP3/#meta-element).
+- **Local server:** reviewed Host/method restrictions, public-file snapshot, decoding/traversal checks, canonical containment, symbolic-link component checks, MIME types and headers. Existing HTTP and junction regression checks pass. A privileged local writer can still race filesystem checks; this is a localhost development server, not a hardened public file service.
+- **GitHub Actions:** reviewed triggers, shell arguments, install/audit steps, token permissions, pinned refs, timeout, no persisted checkout credentials and no `pull_request_target`. Retrieved each pinned action definition through the GitHub connector at its exact SHA to confirm resolution. Contents access is read-only; only CodeQL receives `security-events: write`. There is no user-controlled expression interpolated into shell commands or explicit secret logging. No configuration defect requiring a workflow change was confirmed. Workflow execution, CodeQL results and account settings were not verified remotely. See [GitHub's token-permission guidance](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token).
+- **Dependabot:** weekly npm and github-actions entries target the repository root with bounded open PR counts. Configuration was reviewed; no remote update run or security-setting enablement is claimed.
+- **Dependencies/secrets/privacy:** no production dependencies were added. `npm audit` reported zero vulnerabilities through the environment's configured registry/cache; fresh advisory-network access was not verified. Working-tree scanning passed. Node's full-history scanner could not spawn Git (`EPERM`) during this re-audit; the earlier 87-blob historical result below is not presented as a fresh scan of the current history. Local fonts remain local and no tracking was introduced.
+
+### Current executed results
+
+All commands below were actually invoked during this re-audit using the Windows `npm.cmd` launcher.
+
+| Command/check | Result |
+| --- | --- |
+| `npm ci` | Exit 0; 2 packages installed; reported zero vulnerabilities. |
+| Baseline `npm test` | Exit 0; all 131 pre-existing tests passed before the new regression cases. |
+| Final `npm test` | Exit 0; **138 passed, 0 failed, 0 skipped** (the prior 131 plus 7 independent regression tests). |
+| Targeted `node --test --test-isolation=none tests/security-reaudit.test.cjs` | 7 passed after fixes; the first five were observed failing before fixes. |
+| `npm run test:security:browser` | Exit 1; Chromium launch blocked with `spawn EPERM`; Firefox/WebKit executables absent. No browser assertions executed. Reattempted after strengthening the suite. |
+| `npm run test:browser` | Exit 1; Chromium launch blocked with `spawn EPERM`; no regression browser assertions executed. |
+| `npm run test:themes` | Exit 1; Chromium launch blocked with `spawn EPERM`; no visual/theme assertions executed. |
+| `npm run test:secrets` | Exit 0; no matching patterns in the working tree. |
+| `node tools/scan-secrets.cjs --history` | Exit 1; Git subprocess creation blocked with `EPERM`; this re-audit's full-history scan is incomplete. |
+| `npm audit --json` | Exit 0; total reported vulnerabilities: 0; advisory freshness not independently established. |
+| `node --check tests/browser/security.cjs` | Exit 0. |
+| `git diff --check` | Exit 0 at final review; no whitespace errors. |
+
+Local command output is retained under ignored `artifacts/reaudit-*` files; existing browser report files also record launch failures. No failures were disabled and no assertions were weakened. Existing theme tokens, styles, illustrations, translations and interface layout were not changed during this re-audit. Unit coverage for the three themes and supported languages passes; visual equivalence cannot be certified without the blocked browser suites.
+
+Changed files in this re-audit: `js/security.js`, `js/store.js`, `js/script.js`, `js/planner.js`, `js/recovery.js`, `js/recovery-ui.js`, `tools/scan-secrets.cjs`, `tests/security-reaudit.test.cjs`, `tests/browser/security.cjs`, and this report. Actions and Dependabot were reviewed and left unchanged.
+
+### Recovery use and remaining risks
+
+Download a backup before restoring or clearing, especially when unsaved work is present. A restore now requires quota space for its durable previous-data snapshot and may safely refuse a replacement when that space is unavailable. The previous snapshot is plaintext and retains only the most recent pre-restore saved data; it does not automatically capture unsaved edits in other tabs. To recover it, download a recovery backup, extract the JSON string in its `previous` field into a standalone JSON file with a trusted local editor, and use the normal restore control after reviewing it. It can also be read directly from the named localStorage key. Invalid primary data in such a snapshot still requires manual repair rather than bypassing validation. Restoring the outer envelope restores its current entries/unsaved snapshots, not the embedded previous generation. Clearing NABNAK data deletes both generations after confirmation.
+
+**Medium remaining risks:** plaintext/shared-origin storage, optimistic cross-tab races, and best-effort multi-key rollback remain architectural limits. Use a dedicated origin for private deployments; do not store secrets. **Low remaining risks:** GitHub Pages lacks configurable HTTP-only anti-framing and related headers; the development server has a privileged-local-writer race; pattern scanning cannot identify every secret. Missing browser evidence is an acceptance/verification gap, not proof that CSP or XSS protection succeeds or fails. Required follow-up: run all browser/theme suites with process permission and installed engines, run fresh advisory/full-history/CodeQL checks in CI, and confirm GitHub security settings. No push or remote setting changes were performed.
+
+## Initial hardening audit (historical)
+
 ## Architecture and threat model
 
 NABNAK is a static, same-origin application with tasks/goals in `nabnak.data`, mind maps in independent keys, and separate preferences. Rendering uses `textContent`, DOM construction and fixed SVG element/attribute names. Text is never interpreted as markup. Translations and icon paths come from repository code, not user input. Dynamic selectors use validated calendar dates; task/node IDs are compared as values rather than interpolated into selectors. The existing three skins, Original light/dark/system behavior, PT-BR/EN/ES dictionaries, task/calendar/goal workflows and mobile controls remain.
@@ -54,7 +113,7 @@ The existing sidebar contains a collapsed **Privacy and recovery** section with 
 2. **Restore recovery backup** checks the file size (24 MiB), envelope, keys, preferences and primary content schemas before asking for replacement confirmation. Only keys included in the file are replaced. Invalid raw primary data is downloadable for manual repair but cannot be automatically loaded. Backup-key strings may remain unreadable, because they are recovery material rather than active data. Successful restore reloads the page.
 3. **Clear NABNAK data** asks for explicit confirmation and removes only a fixed list of content, legacy, backup and preference keys, then reloads. It never calls `localStorage.clear()` and leaves unrelated origin data alone.
 
-Download a current backup before restoring or clearing. Do not edit in other tabs during recovery. localStorage cannot provide a multi-key transaction: restore retains previous values and attempts rollback after a write failure, but rollback can also fail if the browser/storage becomes unavailable. The UI reports this limitation rather than success. Recovery files larger than the supported envelope size require manual offline extraction/repair. A recovery file is not signed; validation checks shape and safety, not authorship.
+Download a current backup before restoring or clearing. Do not edit in other tabs during recovery. localStorage cannot provide a multi-key transaction: restore first durably retains a versioned previous-data snapshot, then attempts rollback after a write failure, but rollback can also fail if the browser/storage becomes unavailable. The UI reports this limitation rather than success. Recovery files larger than the supported envelope size require manual offline extraction/repair. A recovery file is not signed; validation checks shape and safety, not authorship.
 
 Cross-tab content writes compare serialized snapshots and listen for storage events. Conflicts retain saved data and warn users to export unsaved work and reload. Preferences remain last-write-wins. This is optimistic conflict detection, not an atomic compare-and-swap: simultaneous writes between check and set can still race because localStorage has no transaction/locking primitive. No claim of complete cross-tab consistency is made.
 
@@ -87,7 +146,7 @@ Maintainers should manually enable private vulnerability reporting, secret scann
 - Tooling/configuration: `tools/serve.cjs`, `tools/scan-secrets.cjs`, `package.json`, `.gitignore`, `.github/dependabot.yml`, `.github/workflows/security.yml`.
 - Verification/documentation: `tests/security.test.cjs`, `tests/browser/security.cjs`, `SECURITY.md`, `README.md`, `docs/SECURITY.md`.
 
-## Executed verification
+## Initial hardening verification (historical)
 
 Browser results must not be inferred from the DOM harness or from configured CI.
 

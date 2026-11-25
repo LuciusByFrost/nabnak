@@ -55,12 +55,13 @@ async function run(browser, engine) {
   });
   assert.deepEqual(importResults, {rejected: true, unchanged: true, quotaRejected: true, quotaUnchanged: true, escaped: true});
   // Exercise the real file picker, including the pre-read size gate.
-  await page.evaluate(() => { window.fileReads = 0; const original = File.prototype.text; File.prototype.text = function () { window.fileReads++; return original.call(this); }; });
+  await page.evaluate(() => { window.fileReads = 0; window.fileCompletions = 0; const original = File.prototype.text; File.prototype.text = async function () { window.fileReads++; try { return await original.call(this); } finally { window.fileCompletions++; } }; });
+  await page.locator('.mm-file-menu summary').click();
   for (const [name, buffer, shouldRead] of [['bad.json', Buffer.from('{"version":99,"maps":[]}'), 1], ['large.json', Buffer.alloc(2 * 1024 * 1024 + 1, 32), 0]]) {
-    const count = await page.evaluate(() => window.fileReads), before = await page.evaluate(() => JSON.stringify(NabnakMindmaps.store.getState()));
+    const count = await page.evaluate(() => window.fileReads), completed = await page.evaluate(() => window.fileCompletions), before = await page.evaluate(() => JSON.stringify(NabnakMindmaps.store.getState()));
     const picker = page.waitForEvent('filechooser'); await page.locator('#mm-import').click();
     await (await picker).setFiles({name, mimeType: 'application/json', buffer});
-    await page.waitForFunction(count => document.getElementById('mm-message').textContent.length > 0 && window.fileReads >= count, count + shouldRead);
+    await page.waitForFunction(({reads, completed}) => window.fileReads === reads && window.fileCompletions >= completed, {reads: count + shouldRead, completed: completed + shouldRead});
     assert.equal(await page.evaluate(() => window.fileReads), count + shouldRead);
     assert.equal(await page.evaluate(() => JSON.stringify(NabnakMindmaps.store.getState())), before);
   }
@@ -74,6 +75,33 @@ async function run(browser, engine) {
   });
   await page.waitForFunction(() => window.violations.length >= 3);
   assert.deepEqual(await page.evaluate(() => [window.cspExecuted, window.evalExecuted, window.handlerExecuted].map(Boolean)), [false, false, false]);
+  // Pages delivers only the meta policy. A header-only test can mask a broken meta declaration.
+  const metaPage = await context.newPage();
+  const html = await fs.readFile(path.resolve(__dirname, '../../index.html'), 'utf8');
+  await metaPage.route('**/meta-only', route => route.fulfill({contentType: 'text/html; charset=utf-8', body: html}));
+  await metaPage.addInitScript(() => { window.violations = []; document.addEventListener('securitypolicyviolation', event => window.violations.push(event.effectiveDirective)); });
+  const metaResponse = await metaPage.goto(`http://127.0.0.1:${server.address().port}/meta-only`, {waitUntil: 'networkidle'});
+  assert.equal(metaResponse.headers()['content-security-policy'], undefined);
+  assert.equal(await metaPage.evaluate(() => typeof NabnakMindmaps.importJson), 'function');
+  await metaPage.evaluate(() => NabnakMindmaps.open());
+  assert.notEqual(await metaPage.locator('#mm-world').evaluate(el => getComputedStyle(el).transform), 'none');
+  assert.deepEqual(await metaPage.evaluate(() => window.violations), []);
+  await metaPage.evaluate(() => {
+    const script = document.createElement('script'); script.textContent = 'window.metaInline = true'; document.head.append(script);
+    try { (0, eval)('window.metaEval = true'); } catch {}
+    const el = document.createElement('button'); el.setAttribute('onclick', 'window.metaHandler = true'); document.body.append(el); el.click();
+    const external = document.createElement('script'); external.src = 'https://example.invalid/blocked.js'; document.head.append(external);
+    const object = document.createElement('object'); object.data = 'data:text/html,<script>parent.metaObject=true</script>'; document.body.append(object);
+    const base = document.createElement('base'); base.href = 'https://example.invalid/'; document.head.append(base);
+    window.fetchBlocked = fetch('/index.html').then(() => false, () => true);
+    const form = document.createElement('form'); form.action = '/must-not-submit'; document.body.append(form); form.submit();
+  });
+  await metaPage.waitForFunction(() => ['script-src-elem', 'script-src-attr', 'connect-src', 'object-src', 'base-uri', 'form-action'].every(item => window.violations.includes(item)));
+  assert.equal(await metaPage.evaluate(() => window.fetchBlocked), true);
+  assert.deepEqual(await metaPage.evaluate(() => [window.metaInline, window.metaEval, window.metaHandler, window.metaObject].map(Boolean)), [false, false, false, false]);
+  const directives = await metaPage.evaluate(() => window.violations);
+  for (const directive of ['script-src-elem', 'script-src-attr', 'connect-src', 'object-src', 'base-uri', 'form-action']) assert.ok(directives.includes(directive), 'Missing meta CSP enforcement for ' + directive);
+  await metaPage.close();
   assert.deepEqual(errors, []);
   // Corruption must survive reload verbatim.
   await page.evaluate(() => { localStorage.setItem('nabnak.data', '{broken'); localStorage.setItem('nabnak.mindmaps', '{broken'); });
@@ -81,7 +109,7 @@ async function run(browser, engine) {
   assert.deepEqual(await page.evaluate(() => [localStorage.getItem('nabnak.data'), localStorage.getItem('nabnak.mindmaps')]), ['{broken', '{broken']);
   assert.equal(await page.evaluate(() => NabnakMindmaps.store.isReadOnly()), true);
   await context.close();
-  report.checks.push(`${engine}: inert text in task/goal/map fields, clipboard, SVG, malicious files, size gate, quota/atomicity, corruption, CSP and no external requests`);
+  report.checks.push(`${engine}: inert text in task/goal/map fields, clipboard, SVG, malicious files, size gate, quota/atomicity, corruption, header and meta-only CSP, and no external requests`);
 }
 async function main() {
   server = await startServer();
