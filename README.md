@@ -29,6 +29,20 @@ e a suíte de aparência: `npm.cmd run test:themes`.
 Os temas lo-fi incluem [ilustrações locais de cafeteria e cidade chuvosa](docs/LOFI-ILLUSTRATIONS.md),
 com ativação por padrão para novas preferências e opção de desligar em Aparência.
 
+## Segurança e privacidade
+
+Os dados ficam no `localStorage` deste navegador, sem criptografia. Não guarde senhas,
+tokens ou credenciais. Projetos GitHub Pages no mesmo domínio compartilham a origem
+e podem acessar o mesmo armazenamento. Não há analytics nem requisições a fontes externas.
+
+O menu inclui **Privacidade e recuperação** para baixar uma cópia versionada,
+restaurar uma cópia validada e limpar somente dados do NABNAK, com confirmação.
+Baixe uma cópia antes de restaurar ou limpar. Veja [a política](SECURITY.md) e
+[o relatório de auditoria](docs/SECURITY.md), incluindo limites e testes não executados.
+
+Testes adicionais: `npm.cmd run test:security:browser` e `npm.cmd run test:secrets`.
+Para as três engines: `npx playwright install chromium firefox webkit`.
+
 ## Deploy
 O deploy do projeto está sendo feito com o *github-pages* e está disponível [aqui](https://lucasbecker.github.io/nabnak).
 
