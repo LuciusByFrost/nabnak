@@ -28,6 +28,14 @@ for (const [theme, tokens] of [['light', light], ['dark', dark], ['lofi-cafe', c
       pairs.push(['--accent-ink', '--accent-hover', 4.5]);
       pairs.push(['--positive-fill', '--surface-soft', 3]);
     }
+    if (theme === 'lofi-cafe') {
+      // Creamy Coffee also uses the selected surface for hover states and recovery controls.
+      for (const foreground of ['--text', '--muted', '--accent', '--danger', '--success', '--warning']) pairs.push([foreground, '--surface-hover', 4.5]);
+      for (const background of ['--sidebar', '--surface-soft', '--surface-hover']) {
+        pairs.push(['--control-border', background, 3], ['--focus', background, 3]);
+      }
+      pairs.push(['--text-secondary', '--bg', 4.5], ['--text-secondary', '--surface', 4.5], ['--scroll-thumb', '--surface-soft', 3]);
+    }
     for (const [fg, bg, minimum] of pairs) {
       const values = [luminance(tokens[fg]), luminance(tokens[bg])].sort((a, b) => b - a);
       const ratio = (values[0] + .05) / (values[1] + .05);
